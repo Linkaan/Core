@@ -23,8 +23,10 @@
  *****************************************************************************
  */
 
+#define _GNU_SOURCE
 #include <signal.h>
 #include <semaphore.h>
+#include <pthread.h>
 #include <stdio.h>
 #include <stdlib.h>
 #include <errno.h>
@@ -33,13 +35,26 @@
 
 #include "common.h"
 
+/* The PIR sensor is wired to the physical pin 31 (wiringPi pin 21) */
 #define PIR_PIN 21
+
+/* Helper macro to attempt joining a thread, if a timeout runs out it shall
+   cancel the thread */
+#define join_or_cancel_thread(t) \
+		s = pthread_timedjoin_np(t, NULL, &ts); \
+   		if (s != 0) \
+   		  { \
+   		    s = pthread_cancel(t); \
+   		    if (s != 0) \
+   		    	log_error ("error in pthread_cancel"); \
+   		  }
 
 /* String containing name the program is called with.
    To be initialized by main(). */
 extern const char *__progname;
 
 /* Forward declarations used in this file. */
+static void do_cleanup (void);
 
 /* Non-zero means we should exit the program as soon as possible */
 static sem_t keep_going;
@@ -53,6 +68,8 @@ handle_sigint (int signum)
 void
 handle_signals ()
 {
+	struct sigaction new_action, old_action;
+
 	/* Set up the structure to specify the new action. */
 	new_action.sa_handler = handle_sigint;
 	sigemptyset (&new_action.sa_mask);
@@ -75,9 +92,8 @@ int
 main (void)
 {
 	int s;
-	pthread_t timer_t;
+	struct timespec ts;
 	struct thread_data tdata;
-	struct sigaction new_action, old_action;
 
 	/* Initialize keep_going as binary semaphore initially 0 */
 	sem_init (&keep_going, 0, 0);
@@ -89,41 +105,107 @@ main (void)
 	if (tdata.timerfd  < 0)
 	  {
 	  	log_error ("error in timerfd_create");
-		exit (1);
+	  	do_cleanup (&tdata);
+		return 1;
 	  }
 
 	/* Create a pipe used to singal all threads to begin shutdown sequence */
 	if (pipe (tdata.timerpipe) != 0)
 	  {
 	    log_error ("error creating pipe");
-	   	exit (1);
+	    do_cleanup (&tdata);
+	   	return 1;
 	  }
 
 	/* Initialize thread creation attributes */
-	s = pthread_attr_init (&attr);
+	s = pthread_attr_init (&tdata.attr);
 	if (s != 0)
 	  {
 		log_error ("error in pthread_attr_init");
-		exit (1);
+		do_cleanup (&tdata);
+		return 1;
 	  }
 
-	s = pthread_create (&timer_t, &attr, &thread_timeout_start, &tdata);
+	/* Explicitly create threads as joinable, only possible error is EINVAL
+	   if the second parameter (detachstate) is invalid */
+	s = pthread_attr_setdetachstate (&tdata.attr, PTHREAD_CREATE_JOINABLE);
+	if (s != 0)
+	  {
+		log_error ("error in pthread_attr_setdetachstate");
+		do_cleanup (&tdata);
+		return 1;
+	  }
+
+	s = pthread_create (&tdata.timer_t, &tdata.attr, &thread_timeout_start, &tdata);
 	if (s != 0)
 	  {
 		log_error ("error creating timeout thread");
-		exit (1);
+		do_cleanup (&tdata);
+		return 1;
 	  }
 
-	wiringPiSetup ();
+	/* Initialize wiringPi with default pin numbering scheme */
+	s = wiringPiSetup ();
+	if (s != 0)
+	  {
+		log_error ("error in wiringPiSetup");
+		do_cleanup (&tdata);
+		return 1;
+	  }
 
-	if (wiringPiISR (PIR_PIN, INT_EDGE_BOTH, &motion_callback, &tdata) < 0)
+	/* Register a interrupt handler on the pin numbered as PIR_PIN */
+	s = wiringPiISR (PIR_PIN, INT_EDGE_BOTH, &motion_callback, &tdata);
+	if (s != 0)
 	  {
 		log_error ("error in wiringPiISR");
-		exit (1);
+		do_cleanup (&tdata);
+		return 1;
 	  }
 
 	sem_wait (&keep_going);
+
+	/* **************************************************************** */
+	/*								    								*/
+	/*						Begin shutdown sequence		    			*/
+	/*								    								*/
+	/* **************************************************************** */
+
 	sem_destroy (&keep_going);
+
+	s = write (tdata.timerpipe[1], NULL, 8);
+	if (s != 8)
+	  {
+	    log_error ("error in write");
+	    do_cleanup (&tdata);
+		return 1;
+	  }
+
+	/* Fetch current time and put it in ts struct */
+	s = clock_gettime (CLOCK_REALTIME, &ts);
+    if (s != 0)
+      {
+		log_error ("error in clock_gettime");
+	    s = pthread_cancel (timer_t);
+	    if (s != 0)
+	    	log_error ("error in pthread_cancel");
+      }  		
+   	else
+   	  {
+   		ts.tv_sec += 5;
+   		join_or_cancel_thread (timer_t);
+   	  }
+
+   	s = close (tdata.timerpipe[1]);
+   	if (s != 0)
+   		log_error ("error in close");   
+
+   	s = close (tdata.timerpipe[0]);
+   	if (s != 0)
+   		log_error ("error in close");
+
+   	s = pthread_attr_destroy (&tdata.attr);
+	if (s != 0)
+		log_error ("error in pthread_attr_destroy");
 
 	return 0;
 }

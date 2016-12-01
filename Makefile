@@ -1,6 +1,6 @@
 CC := gcc
 INCLUDE ?= -I.
-CFLAGS := $(INCLUDE) -std=gnu11 -g -Wall -Wextra -D _GNU_SOURCE
+CFLAGS := $(INCLUDE) -std=gnu11 -g -Wall -Wextra
 LDFLAGS := -lwiringPi -lpthread
 SOURCES := core.c motion_handler.c
 HEADERS := motion_handler.h

@@ -4,6 +4,8 @@
 
 typedef struct
   {
-  	int timerfd;
-  	int timerpipe[2];
+  	int 			timerfd;
+  	int 			timerpipe[2];
+  	pthread_t 		timer_t;
+	pthread_attr_t 	attr;
   } thread_data;
