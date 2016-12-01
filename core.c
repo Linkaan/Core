@@ -75,57 +75,55 @@ int
 main (void)
 {
 	int s;
-	int timerfd;
-	int timerpipe[2];
 	pthread_t timer_t;
 	struct thread_data tdata;
 	struct sigaction new_action, old_action;
 
 	/* Initialize keep_going as binary semaphore initially 0 */
-	sem_init(&keep_going, 0, 0);
+	sem_init (&keep_going, 0, 0);
 
-	handle_signals();	
+	handle_signals ();	
 
 	/* Initialize timer used for timeout on video recording */
-	timerfd = timerfd_create(CLOCK_REALTIME, 0);
-	if (timerfd < 0)
+	tdata.timerfd  = timerfd_create (CLOCK_REALTIME, 0);
+	if (tdata.timerfd  < 0)
 	  {
-	  	log_error("error in timerfd_create");
-		exit(1);
+	  	log_error ("error in timerfd_create");
+		exit (1);
 	  }
-	tdata.timerfd = timerfd;
+
+	/* Create a pipe used to singal all threads to begin shutdown sequence */
+	if (pipe (tdata.timerpipe) != 0)
+	  {
+	    log_error ("error creating pipe");
+	   	exit (1);
+	  }
 
 	/* Initialize thread creation attributes */
-	s = pthread_attr_init(&attr);
+	s = pthread_attr_init (&attr);
 	if (s != 0)
 	  {
-		log_error("error in pthread_attr_init");
-		exit(1);
+		log_error ("error in pthread_attr_init");
+		exit (1);
 	  }
 
-	s = pthread_create(&timer_t, &attr, &thread_timeout_start, &tdata);
+	s = pthread_create (&timer_t, &attr, &thread_timeout_start, &tdata);
 	if (s != 0)
 	  {
-		log_error("error creating timeout thread");
-		exit(1);
+		log_error ("error creating timeout thread");
+		exit (1);
 	  }
 
-	wiringPiSetup();
+	wiringPiSetup ();
 
-	if (wiringPiISR(PIR_PIN, INT_EDGE_BOTH, &motion_callback, &tdata) < 0)
+	if (wiringPiISR (PIR_PIN, INT_EDGE_BOTH, &motion_callback, &tdata) < 0)
 	  {
-		log_error("error in wiringPiISR");
-		exit(1);
+		log_error ("error in wiringPiISR");
+		exit (1);
 	  }
 
-	if (pipe (timerpipe))
-	  {
-	    log_error("error creating pipe");
-	   	exit(1);
-	  }
-
-	sem_wait(&keep_going);
-	sem_destroy(&keep_going);
+	sem_wait (&keep_going);
+	sem_destroy (&keep_going);
 
 	return 0;
 }

@@ -5,4 +5,5 @@
 typedef struct
   {
   	int timerfd;
+  	int timerpipe[2];
   } thread_data;
