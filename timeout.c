@@ -1,6 +1,6 @@
 /*
  *	timeout.c
- *	  Asynchronous function to handle timeout event set by motion handler 
+ *	  Asynchronous function to handle timeout event set by motion handler
  *****************************************************************************
  *  This file is part of Fågelmataren, an embedded project created to learn
  *  Linux and C. See <https://github.com/Linkaan/Fagelmatare>
@@ -24,6 +24,9 @@
 #include <wiringPi/wiringPi.h>
 
 #include "common.h"
+
+/* Forward declarations used in this file. */
+static void do_cleanup (void);
 
 static void *
 thread_timeout_start(void *arg)

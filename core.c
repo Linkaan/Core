@@ -33,6 +33,7 @@
 
 #include <wiringPi/wiringPi.h>
 
+#include "timeout.h"
 #include "common.h"
 
 /* The PIR sensor is wired to the physical pin 31 (wiringPi pin 21) */
@@ -48,10 +49,6 @@
    		    if (s != 0) \
    		    	log_error ("error in pthread_cancel"); \
    		  }
-
-/* String containing name the program is called with.
-   To be initialized by main(). */
-extern const char *__progname;
 
 /* Forward declarations used in this file. */
 static void do_cleanup (void);
@@ -101,7 +98,7 @@ main (void)
 	handle_signals ();	
 
 	/* Initialize timer used for timeout on video recording */
-	tdata.timerfd  = timerfd_create (CLOCK_REALTIME, 0);
+	tdata.timerfd = timerfd_create (CLOCK_REALTIME, 0);
 	if (tdata.timerfd  < 0)
 	  {
 	  	log_error ("error in timerfd_create");
@@ -110,7 +107,8 @@ main (void)
 	  }
 
 	/* Create a pipe used to singal all threads to begin shutdown sequence */
-	if (pipe (tdata.timerpipe) != 0)
+	s = pipe (tdata.timerpipe);
+	if (s != 0)
 	  {
 	    log_error ("error creating pipe");
 	    do_cleanup (&tdata);

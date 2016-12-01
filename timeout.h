@@ -1,6 +1,6 @@
 /*
  *	timeout.h
- *	  Common macros and defs used in multiple source files
+ *	  The names of functions callable from within timeout
  *****************************************************************************
  *  This file is part of Fågelmataren, an embedded project created to learn
  *  Linux and C. See <https://github.com/Linkaan/Fagelmatare>
@@ -21,23 +21,9 @@
  *****************************************************************************
  */
 
-#ifndef _COMMON_H_
-#define _COMMON_H_
+#ifndef _TIMEOUT_H_
+#define _TIMEOUT_H_
 
-#define log_error(msg) \
-		fprintf(stderr, "%s: %s: %d: %s: %s\n", __progname, \
-				__FILE__, __LINE__, msg, strerror(errno))
+static void *thread_timeout_start(void *arg);
 
-/* String containing name the program is called with.
-   To be initialized by main(). */
-extern const char *__progname;
-
-typedef struct
-  {
-  	int 			timerfd;
-  	int 			timerpipe[2];
-  	pthread_t 		timer_t;
-	pthread_attr_t 	attr;
-  } thread_data;
-
-#endif /* _COMMON_H_ */
+#endif /* _TIMEOUT_H_ */
