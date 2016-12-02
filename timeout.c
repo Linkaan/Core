@@ -21,16 +21,40 @@
  *****************************************************************************
  */
 
+#include <pthread.h>
+
 #include <wiringPi/wiringPi.h>
 
+#include "timeout.h"
 #include "common.h"
 
 /* Forward declarations used in this file. */
-static void do_cleanup (void);
+static void cleanup_handler (void *);
 
-static void *
+static void
+cleanup_handler(void *arg)
+{
+	internal_t_data *itdata = arg;
+
+	pthread_mutex_unlock (itdata->record_mutex);
+}
+
+void *
 thread_timeout_start(void *arg)
 {
-	struct thread_data *tdata = arg;
+	thread_data *tdata = arg;
+	internal_t_data itdata;
+
+	itdata.record_mutex = tdata->record_mutex;
+	pthread_cleanup_push(&cleanup_handler, &itdata);
+
+	/* Put the thread in deferred cancellation mode to avoid the scenario
+	   where the thread gets cancelled in the middle of the execution of 
+	   our cleanup handler */
+	pthread_setcanceltype(PTHREAD_CANCEL_DEFERRED, NULL);
+
+	/* Call our cleanup handler */
+	pthread_cleanup_pop(1);
+
 	return NULL;
 }

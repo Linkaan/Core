@@ -90,7 +90,7 @@ main (void)
 {
 	int s;
 	struct timespec ts;
-	struct thread_data tdata;
+	thread_data tdata;
 
 	/* Initialize keep_going as binary semaphore initially 0 */
 	sem_init (&keep_going, 0, 0);

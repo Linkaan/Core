@@ -24,6 +24,14 @@
 #ifndef _TIMEOUT_H_
 #define _TIMEOUT_H_
 
-static void *thread_timeout_start(void *arg);
+/* Used internally by thread to store allocated resources  */
+typedef struct
+  {
+  	pthread_t_mutex mtx;
+  	struct pollfd p[2];
+  } internal_t_data;
+
+/* This function is invoked by core as the timer thread is created */
+extern void *thread_timeout_start(void *arg);
 
 #endif /* _TIMEOUT_H_ */
