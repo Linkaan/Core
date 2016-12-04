@@ -23,6 +23,8 @@
 
 #include <pthread.h>
 #include <stdint.h>
+#include <stdio.h>
+#include <stdbool.h>
 
 #include <wiringPi/wiringPi.h>
 
@@ -66,22 +68,19 @@ thread_timeout_start(void *arg)
 	  		log_error("poll failed");
 	  	else if (s > 0)
 	  	  {
-            if (itdata.poll_fds[0].revents & events)
-              {
-                s = read (itdata.poll_fds[0].fd, &u, sizeof (uint64_t));
-                if (s != sizeof (uint64_t))
-                    log_error ("read failed")               
-              }            
+            s = read (itdata.poll_fds[0].fd, &u, sizeof (uint64_t));
+            if (s != sizeof (uint64_t))
+                log_error ("read failed");
 
             pthread_cleanup_push (pthread_mutex_unlock, (void *) &itdata->record_mutex);
             pthread_mutex_lock (&itdata->record_mutex);
-            atomic_store (&tdata->is_recording, false);
+            //atomic_store (&tdata->is_recording, false);
 
             /* Instead of using a pthread condition variable we use a eventfd
                object to notify other threads because we can then poll on
                multiple file descriptors */
-            u = ~0LL;
-            s = write (tdata->record_event, &u, sizeof (uint64_t));
+            u = PICAM_STOP_RECORD;
+            s = write (tdata->record_eventfd, &u, sizeof (uint64_t));
             if (s != sizeof (uint64_t))
                 log_error ("write failed");
 

@@ -38,28 +38,214 @@
 /* Forward declarations used in this file. */
 static void cleanup_handler (void *);
 
-static int watch_state_enabled = 1;
+static void handle_state_file_created ();
+static void handle_state_file (char *, char *);
+
+static int setup_inotify (internal_t_data *);
 
 /* Start routine for picam thread */
 void *
 thread_picam_start (thread_data *tdata)
 {
-	int s;
+	int s, events;
 	thread_data *tdata = arg;
 	internal_t_data itdata;
 
 	pthread_setcanceltype (PTHREAD_CANCEL_DEFERRED, NULL);
 	pthread_cleanup_push (&cleanup_handler, &itdata);
 
-	s = inotify_init();
-	if (s < 0)
+	/* TODO: add this to a config file */
+	itdata.dir = PICAM_STATE_DIR;
+	s = setup_inotify(&itdata);
+	if (s != 0)
+		itdata.watch_state_enabled = false;
+
+	memset(&itdata.poll_fds, 0, sizeof (itdata.poll_fds));
+
+	itdata.poll_fds[0].fd = itdata.inotify_fd;
+	itdata.poll_fds[0].revents = 0;
+	itdata.poll_fds[0].events = events = POLLIN | POLLPRI;
+
+	itdata.poll_fds[1] = itdata.poll_fds[0];
+	itdata.poll_fds[1].fd = tdata->timerpipe[0];
+
+	itdata.poll_fds[2] = itdata.poll_fds[0];
+	itdata.poll_fds[2].fd = tdata->record_eventfd;
+
+	while (1)
 	  {
-	  	log_error("inotify_init failed");
-		pthread_exit();
-	  }
+	  	/* Passing -1 to poll as third argument means to block (INFTIM) */
+	  	s = poll (&itdata.poll_fds, 3, -1);
+
+	  	if (s < 0)
+	  		log_error ("poll failed");
+	  	else if (s > 0)
+	  	  {
+            if (itdata.poll_fds[0].revents & events)
+              {
+              	handle_state_file_created ();              	
+              }
+            else /* tdata->timerpipe[0] or tdata->record_eventfd */
+              {
+                s = read (itdata.poll_fds[0].fd, &u, sizeof (uint64_t));
+                if (s != sizeof (uint64_t))
+                    log_error ("read failed");              	
+              }
+
+            if (itdata.poll_fds[1].revents & events)
+              break;
+          }
+      }
 
 	/* Call our cleanup handler */
 	pthread_cleanup_pop (1);
 
 	return NULL;
+}
+
+/* When there is a inotify event to be read */
+static void
+handle_state_file_created ()
+{
+	struct inotify_event event;
+	s = read (fd, &event, sizeof (struct inotify_event));
+    if (s != sizeof (struct inotify_event))
+        log_error ("read failed");
+    if (event.len)
+      {
+      	if (event.mask & itdata.inotify_mask)
+      	  {
+      	  	/* Ignore all directories */
+      	  	if (!(event.mask & IN_ISDIR))
+      	  	  {
+      	  	  	/* We add 2 bytes for the delimiter and nul-terminator */
+      	  	  	int path_len = itdata.dir_strlen + strlen (event.name) + 2;
+      	  	  	itdata.path = malloc (path_len);
+      	  	  	if (itdata.path == NULL)
+      	  	  	  log_error ("malloc for file path failed");
+      	  	  	else
+      	  	  	  {
+      	  	  	  	s = snprintf (itdata.path, path_len, "%s/%s", itdata.dir, event.name);
+
+      	  	  	  	itdata.fp = fopen (itdata.path, "rb");
+      	  	  	  	if (itdata.fp)
+      	  	  	  	  {
+      	  	  	  	  	fseek (itdata.fp, 0, SEEK_END);
+      	  	  	  	  	long content_len = ftell (itdata.fp);
+      	  	  	  	  	fseek (itdata.fp. 0, SEEK_SET);
+
+      	  	  	  	  	itdata.content = malloc (content_len + 1);                  	  	  	  	  	
+      	  	  	  	  	if (content)
+      	  	  	  	  	  {
+      	  	  	  	  	  	fread (itdata.content, 1, content_len, itdata.fp);
+      	  	  	  	  	  	itdata.content[content_len] = '\0';
+      	  	  	  	  	  }
+      	  	  	  	  	else
+      	  	  	  	  		log_error ("malloc for file content failed");
+      	  	  	  	  	fclose (itdata.fp);
+      	  	  	  	  }
+      	  	  	  	else
+      	  	  	  		log_error ("fopen failed");
+      	  	  	  	handle_state_file (event.name, content);
+      	  	  	  }
+      	  	  	s = unlink (itdata.path);
+      	  	  	if (s != 0)
+      	  	  		log_error ("unlink failed");
+      	  	  	free (s.path);
+      	  	  	s.path = NULL;
+      	  	  }
+      	  }
+      }
+}
+
+/* Helper function for when a new state file is created */
+static void
+handle_state_file (internal_t_data *itdata, char *filename, char *content)
+{
+	int s;
+
+	if (strcmp(filename, "record") == 0)
+	  {
+	  	if (content != NULL)
+	  	  {
+	  	  	if (strcmp(content, "false") == 0)
+	  	  	  {
+				if (atomic_compare_exchange_weak(&rec, (_Bool[]) { true }, false))
+				  {
+			        s = clock_gettime (CLOCK_REALTIME, &itdata->end);
+			        if (s != 0)
+			        	printf("recorded video\n");
+			       	else
+			       	  {
+						double elapsed = (end.tv_sec-start.tv_sec) * 1E9 + end.tv_nsec-start.tv_nsec;
+			        	printf("recorded video of length %lf seconds\n", elapsed / 1E9);
+			       	  }			        
+				  }
+	  	  	  }
+	  	  	else if (strcmp(content, "true") == 0)
+	  	  	  {
+	  	  	  	printf("started recording\n");
+	  	  	  	s = clock_gettime (CLOCK_REALTIME, &itdata->start);
+	  	  	  }
+	  	  }
+	  }
+}
+
+/* Helper function to initialize inotify event */
+static int
+setup_inotify (internal_t_data *itdata)
+{
+	int s;	
+
+	s = inotify_init();
+	if (s < 0)
+	  {
+	  	log_error("inotify_init failed");
+		return 1;
+	  }
+	itdata->inotify_fd = s;
+
+	s = stat(itdata->dir);
+	if (s < 0)
+	  {
+	  	if (errno == ENOENT)
+	  	  {
+	  	  	log_error("is picam running? state dir not available");
+	  	  	return 1;
+	  	  }
+	  	else
+	  	  {
+	  	  	log_error("stat failed");
+	  	  	return 1;
+	  	  }
+	  }
+	else
+      {
+        if (!S_ISDIR(st.st_mode))
+          {
+      	  	log_error("state path is not a directory");
+      	  	return 1;
+		  }
+      }
+
+    if (access(itdata->dir, R_OK) != 0)
+      {
+      	log_error("access failed");
+      	return 1;
+      }
+
+    itdata->inotify_mask = IN_CLOSE_WRITE;
+    itdata->wd = inotify_add_watch(itdata->inotify_fd, itdata->dir, itdata->inotify_mask);
+
+	return 0;
+}
+
+/* This function is used to cleanup thread */
+static void
+cleanup_handler(void *arg)
+{
+    internal_t_data *itdata = arg;
+
+    inotify_rm_watch(itdata->fd, itdata->wd);
+    close(itdata->fd);   
 }

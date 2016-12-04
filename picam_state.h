@@ -24,11 +24,20 @@
 #ifndef _PICAM_H_
 #define _PICAM_H_
 
+#include <stdint.h>
+#include <stdbool.h>
+
 /* Used internally by thread to store allocated resources  */
 typedef struct
-  {
-  	int inotify_fd;
-  	struct pollfd poll_fds[2];
+  {  	
+  	_Bool watch_state_enabled;
+  	char *path;
+  	char *content;
+  	int fp;
+  	int inotify_fd;  
+  	uint32_t inotify_mask;
+  	struct stat st;
+  	struct pollfd poll_fds[3];
   } internal_t_data;
 
 /* This function is invoked by core as the timer thread is created */

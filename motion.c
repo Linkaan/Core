@@ -21,6 +21,11 @@
  *****************************************************************************
  */
 
+#include <stdint.h>
+#include <stdio.h>
+#include <stdbool.h>
+#include <time.h>
+
 #include <wiringPi/wiringPi.h>
 
 #include "common.h"
@@ -33,6 +38,7 @@ void
 on_motion_detect (void *arg)
 {
 	int s;
+	uint64_t u;
 	thread_data *tdata = arg;
 
 	if (digitalRead (tdata->pir_pin) == HIGH)
@@ -40,8 +46,14 @@ on_motion_detect (void *arg)
 		reset_timer (tdata->timerfd, 5, 0);
 		if (atomic_compare_exchange_weak (&tdata->is_recording, (_Bool[]) { false }, true))
 		  {
-            pthread_mutex_lock (&tdata->record_mutex);
-            pthread_cond_signal (&tdata->record_cond);
+            pthread_mutex_lock (&tdata->record_mutex);            
+            u = PICAM_START_RECORD;
+            s = write (tdata->record_eventfd, &u, sizeof (uint64_t));
+            if (s != sizeof (uint64_t))
+              {
+                log_error ("write failed");
+                atomic_store (&tdata->is_recording, false);
+              }
             pthread_mutex_unlock (&tdata->record_mutex);
 		  }
 		else

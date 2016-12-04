@@ -29,6 +29,10 @@
 #define _GNU_SOURCE
 #endif
 
+/* Used in record event to start or stop recording */
+#define PICAM_START_RECORD ~0ULL
+#define PICAM_STOP_RECORD 0
+
 #define log_error (msg) \
 		fprintf(stderr, "%s: %s: %d: %s: %s\n", __progname, \
 				__FILE__, __LINE__, msg, strerror(errno))
@@ -43,6 +47,7 @@ typedef struct
   	int 			pir_pin;
   	int 			timerfd;
   	int 			timerpipe[2];
+  	int 			record_eventfd;
   	pthread_t 		timer_t;
   	pthread_t 		picam_t;
 	pthread_attr_t	attr;

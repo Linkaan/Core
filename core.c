@@ -106,13 +106,14 @@ setup_thread_attr (thread_data *tdata)
 		return s;	
 	  }
 
-	s = pthread_cond_init (&tdata->record_cond, NULL);
+	s = eventfd (0, 0);
 	if (s != 0)
 	  {
-	    log_error ("error in pthread_cond_init");
+	    log_error ("error in eventfd");
 		do_cleanup (tdata);
-		return s;	
+		return s;
 	  }
+	tdata->record_eventfd = s;
 
 	/* Initialize thread creation attributes */
 	s = pthread_attr_init (&tdata->attr);
@@ -238,7 +239,7 @@ main (void)
 	sem_destroy (&keep_going);
 
 	/* Write 8 bytes to notify all threads to exit */
-	u = ~0LL;
+	u = ~0ULL;
 	s = write (tdata.timerpipe[1], &u, sizeof (uint64_t));
 	if (s != sizeof (uint64_t))
 	  {
@@ -266,9 +267,9 @@ main (void)
 	if (s != 0)
 		log_error ("error in pthread_mutex_destroy");
 
-   	s = pthread_cond_destroy (&tdata->record_cond);
-	if (s != 0)
-		log_error ("error in pthread_cond_destroy");
+   	s = close (tdata.record_eventfd);
+   	if (s != 0)
+   		log_error ("error in close");
 
    	s = close (tdata.timerpipe[1]);
    	if (s != 0)
