@@ -24,10 +24,13 @@
 #ifndef _COMMON_H_
 #define _COMMON_H_
 
-/* Define _GNU_SOURCE for pthread_timedjoin_np */
+/* Define _GNU_SOURCE for pthread_timedjoin_np and asprintf */
 #ifndef _GNU_SOURCE
 #define _GNU_SOURCE
 #endif
+
+/* Temporary defs before config file is setup */
+#define PICAM_STATE_DIR "/"
 
 /* Used in record event to start or stop recording */
 #define PICAM_START_RECORD ~0ULL

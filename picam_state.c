@@ -58,9 +58,10 @@ thread_picam_start (thread_data *tdata)
 	pthread_cleanup_push (&cleanup_handler, &itdata);
 
 	/* TODO: add these values to a config file */
-	itdata.dir = PICAM_STATE_DIR;
-	itdata.picam_start_hook = PICAM_START_HOOK;
-	itdata.picam_stop_hook = PICAM_STOP_HOOK;
+	asprintf(itdata.dir, PICAM_STATE_DIR);
+	asprintf(itdata.picam_start_hook, PICAM_START_HOOK);
+	asprintf(itdata.picam_stop_hook, PICAM_STOP_HOOK);
+
 	s = setup_inotify(&itdata);
 	if (s != 0)
 		itdata.watch_state_enabled = false;
@@ -280,5 +281,17 @@ cleanup_handler(void *arg)
     internal_t_data *itdata = arg;
 
     inotify_rm_watch(itdata->fd, itdata->wd);
-    close(itdata->fd);   
+    close(itdata->inotify_fd);
+
+    free(itdata->dir);
+    free(itdata->picam_start_hook);
+    free(itdata->picam_stop_hook);
+
+    if (itdata->path)
+    	free(itdata->path);
+    if (itdata->content)
+    	free(itdata->content);
+
+    if (itdata->fp > -1)
+    	fclose(itdata->fp)
 }

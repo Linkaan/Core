@@ -31,12 +31,14 @@
 typedef struct
   {  	
   	_Bool 		watch_state_enabled;
+  	char		*dir;
   	char 		*path;
   	char 		*content;
+  	int 		wd;
   	int 		fp;
   	int 		inotify_fd;
-  	int 		picam_start_hook;
-  	int 		picam_stop_hook;
+  	char 		*picam_start_hook;
+  	char 		*picam_stop_hook;
   	uint32_t 	inotify_mask;
   	struct 		stat st;
   	struct 		pollfd poll_fds[3];
