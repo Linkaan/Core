@@ -38,6 +38,7 @@ typedef struct
   	int 			timerpipe[2];
   	pthread_t 		timer_t;
 	pthread_attr_t 	attr;
+	pthread_t_mutex record_mutex;
   } thread_data;
 
 #endif /* _COMMON_H_ */

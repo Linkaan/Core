@@ -53,15 +53,21 @@
 /* Forward declarations used in this file. */
 static void do_cleanup (void);
 
+static int setup_thread_attr (thread_data *);
+static int create_timer_thread (thread_data *);
+static int setup_wiringPi (thread_data *);
+
 /* Non-zero means we should exit the program as soon as possible */
 static sem_t keep_going;
 
+/* Signal handler for SIGINT, SIGHUP and SIGTERM */
 void
 handle_sigint (int signum)
 {
 	sem_post(&keep_going);
 }
 
+/* Setup termination signals to exit gracefully */
 void
 handle_signals ()
 {
@@ -83,6 +89,75 @@ handle_signals ()
 	sigaction (SIGTERM, NULL, &old_action);
 	if (old_action.sa_handler != SIG_IGN)
 		sigaction (SIGTERM, &new_action, NULL);
+}
+
+/* Helper function to initialize thread attributes */
+static int
+setup_thread_attr (thread_data *tdata)
+{
+	int s;
+
+	/* Initialize thread creation attributes */
+	s = pthread_attr_init (&tdata->attr);
+	if (s != 0)
+	  {
+		log_error ("error in pthread_attr_init");
+		do_cleanup (tdata);
+		return s;
+	  }
+
+	/* Explicitly create threads as joinable, only possible error is EINVAL
+	   if the second parameter (detachstate) is invalid */
+	s = pthread_attr_setdetachstate (&tdata->attr, PTHREAD_CREATE_JOINABLE);
+	if (s != 0)
+	  {
+		log_error ("error in pthread_attr_setdetachstate");
+		do_cleanup (tdata);		
+	  }
+
+	return s;
+}
+
+/* Helper function to create timer thread and start listening on timerfd */
+static int
+create_timer_thread (thread_data *tdata)
+{
+	int s;
+
+	s = pthread_create (&tdata->timer_t, &tdata->attr, &thread_timeout_start,
+						tdata);
+	if (s != 0)
+	  {
+		log_error ("error creating timeout thread");
+		do_cleanup (tdata);
+	  }
+	return s;
+}
+
+/* Helper function to setup wiringPi and register an interrupt handler */
+static int
+setup_wiringPi (thread_data *tdata)
+{
+	int s;
+
+	/* Initialize wiringPi with default pin numbering scheme */
+	s = wiringPiSetup ();
+	if (s != 0)
+	  {
+		log_error ("error in wiringPiSetup");
+		do_cleanup (tdata);
+		return s;
+	  }
+
+	/* Register a interrupt handler on the pin numbered as PIR_PIN */
+	s = wiringPiISR (PIR_PIN, INT_EDGE_BOTH, &motion_callback, tdata);
+	if (s != 0)
+	  {
+		log_error ("error in wiringPiISR");
+		do_cleanup (tdata);
+	  }
+
+	return s;
 }
 
 int
@@ -115,49 +190,22 @@ main (void)
 	   	return 1;
 	  }
 
-	/* Initialize thread creation attributes */
-	s = pthread_attr_init (&tdata.attr);
+	s = setup_thread_attr (&tdata);
 	if (s != 0)
 	  {
-		log_error ("error in pthread_attr_init");
-		do_cleanup (&tdata);
-		return 1;
+	    return 1;
 	  }
 
-	/* Explicitly create threads as joinable, only possible error is EINVAL
-	   if the second parameter (detachstate) is invalid */
-	s = pthread_attr_setdetachstate (&tdata.attr, PTHREAD_CREATE_JOINABLE);
+	s = create_timer_thread (&tdata);
 	if (s != 0)
 	  {
-		log_error ("error in pthread_attr_setdetachstate");
-		do_cleanup (&tdata);
-		return 1;
+	    return 1;
 	  }
 
-	s = pthread_create (&tdata.timer_t, &tdata.attr, &thread_timeout_start, &tdata);
+	s = setup_wiringPi (&tdata);
 	if (s != 0)
 	  {
-		log_error ("error creating timeout thread");
-		do_cleanup (&tdata);
-		return 1;
-	  }
-
-	/* Initialize wiringPi with default pin numbering scheme */
-	s = wiringPiSetup ();
-	if (s != 0)
-	  {
-		log_error ("error in wiringPiSetup");
-		do_cleanup (&tdata);
-		return 1;
-	  }
-
-	/* Register a interrupt handler on the pin numbered as PIR_PIN */
-	s = wiringPiISR (PIR_PIN, INT_EDGE_BOTH, &motion_callback, &tdata);
-	if (s != 0)
-	  {
-		log_error ("error in wiringPiISR");
-		do_cleanup (&tdata);
-		return 1;
+	    return 1;
 	  }
 
 	sem_wait (&keep_going);

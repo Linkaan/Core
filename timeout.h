@@ -27,8 +27,8 @@
 /* Used internally by thread to store allocated resources  */
 typedef struct
   {
-  	pthread_t_mutex mtx;
-  	struct pollfd p[2];
+  	pthread_t_mutex record_mutex;
+  	struct pollfd poll_fds[2];
   } internal_t_data;
 
 /* This function is invoked by core as the timer thread is created */
