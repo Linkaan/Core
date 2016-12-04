@@ -28,6 +28,7 @@
 #include <sys/stat.h>
 #include <string.h>
 #include <unistd.h>
+#include <stdatomic.h>
 #include <sys/inotify.h>
 #include <pthread.h>
 #include <dirent.h>
@@ -58,15 +59,15 @@ thread_picam_start (thread_data *tdata)
 	pthread_cleanup_push (&cleanup_handler, &itdata);
 
 	/* TODO: add these values to a config file */
-	asprintf(itdata.dir, PICAM_STATE_DIR);
-	asprintf(itdata.picam_start_hook, PICAM_START_HOOK);
-	asprintf(itdata.picam_stop_hook, PICAM_STOP_HOOK);
+	asprintf (itdata.dir, PICAM_STATE_DIR);
+	asprintf (itdata.picam_start_hook, PICAM_START_HOOK);
+	asprintf (itdata.picam_stop_hook, PICAM_STOP_HOOK);
 
-	s = setup_inotify(&itdata);
+	s = setup_inotify (&itdata);
 	if (s != 0)
 		itdata.watch_state_enabled = false;
 
-	memset(&itdata.poll_fds, 0, sizeof (itdata.poll_fds));
+	memset (&itdata.poll_fds, 0, sizeof (itdata.poll_fds));
 
 	itdata.poll_fds[0].fd = itdata.inotify_fd;
 	itdata.poll_fds[0].revents = 0;
@@ -192,11 +193,13 @@ handle_state_file (internal_t_data *itdata, char *filename, char *content)
 			       	  }			        
 				  }
 	  	  	  }
-	  	  	else if (strcmp(content, "true") == 0)
+	  	  	else if (strcmp (content, "true") == 0)
 	  	  	  {
 	  	  	  	printf ("started recording\n");
 	  	  	  	s = clock_gettime (CLOCK_REALTIME, &itdata->start);
 	  	  	  }
+	  	  	else
+	  	  		printf ("record state changed to %s\n", content);
 	  	  }
 	  }
 }
@@ -210,10 +213,12 @@ handle_record_event (internal_t_data *itdata, uint64_t u)
 	switch (u)
       {
       	case PICAM_START_RECORD:
-      		s = touch(itdata->picam_start_hook);
+      		s = touch (itdata->picam_start_hook);
       		break;
       	case PICAM_STOP_RECORD:
-      		s = touch(itdata->picam_stop_hook);
+      		s = touch (itdata->picam_stop_hook);
+      		if (s == 0 && !itdata.watch_state_enabled)
+      			atomic_store (&tdata->is_recording, false);
       		break;
       	default:
       		errno = EINVAL;
@@ -222,7 +227,7 @@ handle_record_event (internal_t_data *itdata, uint64_t u)
       }
 
     if (s != 0)
-    	log_error("could not handle record event");
+    	log_error ("could not handle record event");
 }
 
 /* Helper function to initialize inotify event */
@@ -231,45 +236,45 @@ setup_inotify (internal_t_data *itdata)
 {
 	int s;	
 
-	s = inotify_init();
+	s = inotify_init ();
 	if (s < 0)
 	  {
-	  	log_error("inotify_init failed");
+	  	log_error ("inotify_init failed");
 		return 1;
 	  }
 	itdata->inotify_fd = s;
 
-	s = stat(itdata->dir);
+	s = stat (itdata->dir);
 	if (s < 0)
 	  {
 	  	if (errno == ENOENT)
 	  	  {
-	  	  	log_error("is picam running? state dir not available");
+	  	  	log_error ("is picam running? state dir not available");
 	  	  	return 1;
 	  	  }
 	  	else
 	  	  {
-	  	  	log_error("stat failed");
+	  	  	log_error ("stat failed");
 	  	  	return 1;
 	  	  }
 	  }
 	else
       {
-        if (!S_ISDIR(st.st_mode))
+        if (!S_ISDIR (st.st_mode))
           {
-      	  	log_error("state path is not a directory");
+      	  	log_error ("state path is not a directory");
       	  	return 1;
 		  }
       }
 
-    if (access(itdata->dir, R_OK) != 0)
+    if (access (itdata->dir, R_OK) != 0)
       {
-      	log_error("access failed");
+      	log_error ("access failed");
       	return 1;
       }
 
     itdata->inotify_mask = IN_CLOSE_WRITE;
-    itdata->wd = inotify_add_watch(itdata->inotify_fd, itdata->dir, itdata->inotify_mask);
+    itdata->wd = inotify_add_watch (itdata->inotify_fd, itdata->dir, itdata->inotify_mask);
 
 	return 0;
 }
@@ -280,18 +285,18 @@ cleanup_handler(void *arg)
 {
     internal_t_data *itdata = arg;
 
-    inotify_rm_watch(itdata->fd, itdata->wd);
-    close(itdata->inotify_fd);
+    inotify_rm_watch (itdata->fd, itdata->wd);
+    close (itdata->inotify_fd);
 
-    free(itdata->dir);
-    free(itdata->picam_start_hook);
-    free(itdata->picam_stop_hook);
+    free (itdata->dir);
+    free (itdata->picam_start_hook);
+    free (itdata->picam_stop_hook);
 
     if (itdata->path)
-    	free(itdata->path);
+    	free (itdata->path);
     if (itdata->content)
-    	free(itdata->content);
+    	free (itdata->content);
 
     if (itdata->fp > -1)
-    	fclose(itdata->fp)
+    	fclose (itdata->fp)
 }

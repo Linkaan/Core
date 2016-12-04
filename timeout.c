@@ -74,7 +74,6 @@ thread_timeout_start(void *arg)
 
             pthread_cleanup_push (pthread_mutex_unlock, (void *) &itdata->record_mutex);
             pthread_mutex_lock (&itdata->record_mutex);
-            //atomic_store (&tdata->is_recording, false);
 
             /* Instead of using a pthread condition variable we use a eventfd
                object to notify other threads because we can then poll on
