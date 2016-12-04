@@ -24,7 +24,12 @@
 #ifndef _COMMON_H_
 #define _COMMON_H_
 
-#define log_error(msg) \
+/* Define _GNU_SOURCE for pthread_timedjoin_np */
+#ifndef _GNU_SOURCE
+#define _GNU_SOURCE
+#endif
+
+#define log_error (msg) \
 		fprintf(stderr, "%s: %s: %d: %s: %s\n", __progname, \
 				__FILE__, __LINE__, msg, strerror(errno))
 
@@ -32,12 +37,15 @@
    To be initialized by main(). */
 extern const char *__progname;
 
+/* Common data structure used by threads */
 typedef struct
   {
+  	int 			pir_pin;
   	int 			timerfd;
   	int 			timerpipe[2];
   	pthread_t 		timer_t;
-	pthread_attr_t 	attr;
+  	pthread_t 		picam_t;
+	pthread_attr_t	attr;
 	pthread_t_mutex record_mutex;
   } thread_data;
 

@@ -1,6 +1,6 @@
 /*
- *	timeout.h
- *	  The names of functions callable from within timeout
+ *	picam.h
+ *	  The names of functions callable from within picam_state
  *****************************************************************************
  *  This file is part of Fågelmataren, an embedded project created to learn
  *  Linux and C. See <https://github.com/Linkaan/Fagelmatare>
@@ -21,17 +21,17 @@
  *****************************************************************************
  */
 
-#ifndef _TIMEOUT_H_
-#define _TIMEOUT_H_
+#ifndef _PICAM_H_
+#define _PICAM_H_
 
 /* Used internally by thread to store allocated resources  */
 typedef struct
   {
-  	pthread_t_mutex record_mutex;
+  	int inotify_fd;
   	struct pollfd poll_fds[2];
   } internal_t_data;
 
 /* This function is invoked by core as the timer thread is created */
-extern void *thread_timeout_start (void *arg);
+extern void *thread_picam_start (void *arg);
 
-#endif /* _TIMEOUT_H_ */
+#endif /* _PICAM_H_ */

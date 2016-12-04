@@ -23,16 +23,17 @@
  *****************************************************************************
  */
 
-#define _GNU_SOURCE
 #include <signal.h>
 #include <semaphore.h>
 #include <pthread.h>
 #include <stdio.h>
 #include <stdlib.h>
+#include <stdint.h>
 #include <errno.h>
 
 #include <wiringPi/wiringPi.h>
 
+#include "picam.h"
 #include "timeout.h"
 #include "common.h"
 
@@ -91,11 +92,27 @@ handle_signals ()
 		sigaction (SIGTERM, &new_action, NULL);
 }
 
-/* Helper function to initialize thread attributes */
+/* Helper function to initialize thread attributes and condition variables  */
 static int
 setup_thread_attr (thread_data *tdata)
 {
 	int s;
+
+	s = pthread_mutex_init (&tdata->record_mutex, NULL);
+	if (s != 0)
+	  {
+	    log_error ("error in pthread_mutex_init");
+		do_cleanup (tdata);
+		return s;	
+	  }
+
+	s = pthread_cond_init (&tdata->record_cond, NULL);
+	if (s != 0)
+	  {
+	    log_error ("error in pthread_cond_init");
+		do_cleanup (tdata);
+		return s;	
+	  }
 
 	/* Initialize thread creation attributes */
 	s = pthread_attr_init (&tdata->attr);
@@ -150,7 +167,8 @@ setup_wiringPi (thread_data *tdata)
 	  }
 
 	/* Register a interrupt handler on the pin numbered as PIR_PIN */
-	s = wiringPiISR (PIR_PIN, INT_EDGE_BOTH, &motion_callback, tdata);
+	tdata->pir_pin = PIR_PIN;
+	s = wiringPiISR (tdata->pir_pin, INT_EDGE_BOTH, &on_motion_detect, tdata);
 	if (s != 0)
 	  {
 		log_error ("error in wiringPiISR");
@@ -164,6 +182,7 @@ int
 main (void)
 {
 	int s;
+	uint64_t u;
 	struct timespec ts;
 	thread_data tdata;
 
@@ -218,8 +237,10 @@ main (void)
 
 	sem_destroy (&keep_going);
 
-	s = write (tdata.timerpipe[1], NULL, 8);
-	if (s != 8)
+	/* Write 8 bytes to notify all threads to exit */
+	u = ~0LL;
+	s = write (tdata.timerpipe[1], &u, sizeof (uint64_t));
+	if (s != sizeof (uint64_t))
 	  {
 	    log_error ("error in write");
 	    do_cleanup (&tdata);
@@ -240,6 +261,14 @@ main (void)
    		ts.tv_sec += 5;
    		join_or_cancel_thread (timer_t);
    	  }
+
+   	s = pthread_mutex_destroy (&tdata->record_mutex);
+	if (s != 0)
+		log_error ("error in pthread_mutex_destroy");
+
+   	s = pthread_cond_destroy (&tdata->record_cond);
+	if (s != 0)
+		log_error ("error in pthread_cond_destroy");
 
    	s = close (tdata.timerpipe[1]);
    	if (s != 0)

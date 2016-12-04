@@ -1,6 +1,6 @@
 /*
- *	timeout.h
- *	  The names of functions callable from within timeout
+ *	motion.h
+ *	  The names of functions callable from within motion
  *****************************************************************************
  *  This file is part of Fågelmataren, an embedded project created to learn
  *  Linux and C. See <https://github.com/Linkaan/Fagelmatare>
@@ -21,17 +21,10 @@
  *****************************************************************************
  */
 
-#ifndef _TIMEOUT_H_
-#define _TIMEOUT_H_
-
-/* Used internally by thread to store allocated resources  */
-typedef struct
-  {
-  	pthread_t_mutex record_mutex;
-  	struct pollfd poll_fds[2];
-  } internal_t_data;
+#ifndef _MOTION_H_
+#define _MOTION_H_
 
 /* This function is invoked by core as the timer thread is created */
-extern void *thread_timeout_start (void *arg);
+extern void on_motion_detect (void *arg);
 
-#endif /* _TIMEOUT_H_ */
+#endif /* _MOTION_H_ */
