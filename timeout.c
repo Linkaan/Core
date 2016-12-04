@@ -40,8 +40,8 @@ thread_timeout_start(void *arg)
 {
 	int s, events;
     uint64_t u;
-	thread_data *tdata = arg;
-	internal_t_data itdata;
+	struct thread_data *tdata = arg;
+	struct internal_t_data itdata;
 
 	itdata.record_mutex = tdata->record_mutex;
 
@@ -102,5 +102,5 @@ thread_timeout_start(void *arg)
 static void
 cleanup_handler(void *arg)
 {
-    internal_t_data *itdata = arg;
+    struct internal_t_data *itdata = arg;
 }

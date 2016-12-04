@@ -54,9 +54,9 @@
 /* Forward declarations used in this file. */
 static void do_cleanup (void);
 
-static int setup_thread_attr (thread_data *);
-static int create_timer_thread (thread_data *);
-static int setup_wiringPi (thread_data *);
+static int setup_thread_attr (struct thread_data *);
+static int create_timer_thread (struct thread_data *);
+static int setup_wiringPi (struct thread_data *);
 
 /* Non-zero means we should exit the program as soon as possible */
 static sem_t keep_going;
@@ -94,7 +94,7 @@ handle_signals ()
 
 /* Helper function to initialize thread attributes and condition variables  */
 static int
-setup_thread_attr (thread_data *tdata)
+setup_thread_attr (struct thread_data *tdata)
 {
 	int s;
 
@@ -138,7 +138,7 @@ setup_thread_attr (thread_data *tdata)
 
 /* Helper function to create timer thread and start listening on timerfd */
 static int
-create_timer_thread (thread_data *tdata)
+create_timer_thread (struct thread_data *tdata)
 {
 	int s;
 
@@ -154,7 +154,7 @@ create_timer_thread (thread_data *tdata)
 
 /* Helper function to setup wiringPi and register an interrupt handler */
 static int
-setup_wiringPi (thread_data *tdata)
+setup_wiringPi (struct thread_data *tdata)
 {
 	int s;
 
@@ -185,7 +185,7 @@ main (void)
 	int s;
 	uint64_t u;
 	struct timespec ts;
-	thread_data tdata;
+	struct thread_data tdata;
 
 	/* Initialize keep_going as binary semaphore initially 0 */
 	sem_init (&keep_going, 0, 0);

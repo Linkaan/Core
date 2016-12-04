@@ -45,8 +45,7 @@
 extern const char *__progname;
 
 /* Common data structure used by threads */
-typedef struct
-  {
+struct thread_data {
   	int 			pir_pin;
   	int 			timerfd;
   	int 			timerpipe[2];
@@ -55,6 +54,6 @@ typedef struct
   	pthread_t 		picam_t;
 	pthread_attr_t	attr;
 	pthread_t_mutex record_mutex;
-  } thread_data;
+};
 
 #endif /* _COMMON_H_ */

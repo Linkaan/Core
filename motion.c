@@ -31,7 +31,7 @@
 #include "common.h"
 
 /* Forward declarations used in this file. */
-static int reset_timer (int, int, int);
+static int reset_timer (int, const int, const int);
 
 /* Callback function for interrupts on pin numbered as PIR_PIN (see core.c) */
 void
@@ -39,7 +39,7 @@ on_motion_detect (void *arg)
 {
 	int s;
 	uint64_t u;
-	thread_data *tdata = arg;
+	struct thread_data *tdata = arg;
 
 	if (digitalRead (tdata->pir_pin) == HIGH)
 	  {
@@ -66,7 +66,7 @@ on_motion_detect (void *arg)
 
 /* Helper function to set timerfd to a specified timer value */
 static int
-reset_timer(int timerfd, int secs, int isecs)
+reset_timer(int timerfd, const int secs, const int isecs)
 {
   int s;
   struct itimerspec timer_value;

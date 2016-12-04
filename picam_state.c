@@ -41,19 +41,19 @@
 static void cleanup_handler (void *);
 
 static void handle_state_file_created ();
-static void handle_state_file (char *, char *);
-static void handle_record_event (internal_t_data *, uint64_t);
+static void handle_state_file (struct internal_t_data *, const char *, const char *);
+static void handle_record_event (struct internal_t_data *, const uint64_t);
 
-static int setup_inotify (internal_t_data *);
+static int setup_inotify (struct internal_t_data *);
 
 /* Start routine for picam thread */
 void *
-thread_picam_start (thread_data *tdata)
+thread_picam_start (struct thread_data *tdata)
 {
 	int s, events;
 	uint64_t u;
-	thread_data *tdata = arg;
-	internal_t_data itdata;
+	struct thread_data *tdata = arg;
+	struct internal_t_data itdata;
 
 	pthread_setcanceltype (PTHREAD_CANCEL_DEFERRED, NULL);
 	pthread_cleanup_push (&cleanup_handler, &itdata);
@@ -171,7 +171,7 @@ handle_state_file_created ()
 
 /* Helper function for when a new state file is created */
 static void
-handle_state_file (internal_t_data *itdata, char *filename, char *content)
+handle_state_file (struct internal_t_data *itdata, const char *filename, const char *content)
 {
 	int s;
 
@@ -206,7 +206,7 @@ handle_state_file (internal_t_data *itdata, char *filename, char *content)
 
 /* Helper function to create picam hooks on record event */
 static void
-handle_record_event (internal_t_data *itdata, uint64_t u)
+handle_record_event (struct internal_t_data *itdata, const uint64_t u)
 {
 	int s;
 
@@ -232,7 +232,7 @@ handle_record_event (internal_t_data *itdata, uint64_t u)
 
 /* Helper function to initialize inotify event */
 static int
-setup_inotify (internal_t_data *itdata)
+setup_inotify (struct internal_t_data *itdata)
 {
 	int s;	
 
@@ -283,7 +283,7 @@ setup_inotify (internal_t_data *itdata)
 static void
 cleanup_handler(void *arg)
 {
-    internal_t_data *itdata = arg;
+    struct internal_t_data *itdata = arg;
 
     inotify_rm_watch (itdata->fd, itdata->wd);
     close (itdata->inotify_fd);

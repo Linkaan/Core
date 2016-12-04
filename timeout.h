@@ -25,11 +25,10 @@
 #define _TIMEOUT_H_
 
 /* Used internally by thread to store allocated resources  */
-typedef struct
-  {
+struct internal_t_data {
   	pthread_t_mutex record_mutex;
   	struct pollfd poll_fds[2];
-  } internal_t_data;
+};
 
 /* This function is invoked by core as the timer thread is created */
 extern void *thread_timeout_start (void *);
