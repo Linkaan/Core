@@ -1,6 +1,6 @@
 /*
- *	picam.h
- *	  The names of functions callable from within picam_state
+ *	touch.h
+ *	  The names of functions callable from within timeout
  *****************************************************************************
  *  This file is part of Fågelmataren, an embedded project created to learn
  *  Linux and C. See <https://github.com/Linkaan/Fagelmatare>
@@ -21,28 +21,10 @@
  *****************************************************************************
  */
 
-#ifndef _PICAM_H_
-#define _PICAM_H_
+#ifndef _TOUCH_H_
+#define _TOUCH_H_
 
-#include <stdint.h>
-#include <stdbool.h>
+/* Change modification and access times of file */
+extern int touch (const char *);
 
-/* Used internally by thread to store allocated resources  */
-typedef struct
-  {  	
-  	_Bool 		watch_state_enabled;
-  	char 		*path;
-  	char 		*content;
-  	int 		fp;
-  	int 		inotify_fd;
-  	int 		picam_start_hook;
-  	int 		picam_stop_hook;
-  	uint32_t 	inotify_mask;
-  	struct 		stat st;
-  	struct 		pollfd poll_fds[3];
-  } internal_t_data;
-
-/* This function is invoked by core as the timer thread is created */
-extern void *thread_picam_start (void *);
-
-#endif /* _PICAM_H_ */
+#endif /* _TOUCH_H_ */

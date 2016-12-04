@@ -33,6 +33,7 @@
 #include <dirent.h>
 
 #include "picam.h"
+#include "touch.h"
 #include "common.h"
 
 /* Forward declarations used in this file. */
@@ -40,6 +41,7 @@ static void cleanup_handler (void *);
 
 static void handle_state_file_created ();
 static void handle_state_file (char *, char *);
+static void handle_record_event (internal_t_data *, uint64_t);
 
 static int setup_inotify (internal_t_data *);
 
@@ -48,14 +50,17 @@ void *
 thread_picam_start (thread_data *tdata)
 {
 	int s, events;
+	uint64_t u;
 	thread_data *tdata = arg;
 	internal_t_data itdata;
 
 	pthread_setcanceltype (PTHREAD_CANCEL_DEFERRED, NULL);
 	pthread_cleanup_push (&cleanup_handler, &itdata);
 
-	/* TODO: add this to a config file */
+	/* TODO: add these values to a config file */
 	itdata.dir = PICAM_STATE_DIR;
+	itdata.picam_start_hook = PICAM_START_HOOK;
+	itdata.picam_stop_hook = PICAM_STOP_HOOK;
 	s = setup_inotify(&itdata);
 	if (s != 0)
 		itdata.watch_state_enabled = false;
@@ -89,11 +94,13 @@ thread_picam_start (thread_data *tdata)
               {
                 s = read (itdata.poll_fds[0].fd, &u, sizeof (uint64_t));
                 if (s != sizeof (uint64_t))
-                    log_error ("read failed");              	
-              }
+                    log_error ("read failed");
 
-            if (itdata.poll_fds[1].revents & events)
-              break;
+                if (itdata.poll_fds[1].revents & events)
+              		break;
+
+                handle_record_event (itdata, u);
+              }
           }
       }
 
@@ -135,9 +142,9 @@ handle_state_file_created ()
       	  	  	  	  	fseek (itdata.fp. 0, SEEK_SET);
 
       	  	  	  	  	itdata.content = malloc (content_len + 1);                  	  	  	  	  	
-      	  	  	  	  	if (content)
+      	  	  	  	  	if (itdata.content)
       	  	  	  	  	  {
-      	  	  	  	  	  	fread (itdata.content, 1, content_len, itdata.fp);
+      	  	  	  	  	  	fread (itdata.content, 1, content_len, itdata.fp);      	  	  	  	  	  	
       	  	  	  	  	  	itdata.content[content_len] = '\0';
       	  	  	  	  	  }
       	  	  	  	  	else
@@ -146,7 +153,9 @@ handle_state_file_created ()
       	  	  	  	  }
       	  	  	  	else
       	  	  	  		log_error ("fopen failed");
-      	  	  	  	handle_state_file (event.name, content);
+      	  	  	  	handle_state_file (event.name, itdata.content);
+      	  	  	  	free (itdata.content);
+      	  	  	  	itdata.content = NULL;
       	  	  	  }
       	  	  	s = unlink (itdata.path);
       	  	  	if (s != 0)
@@ -170,25 +179,49 @@ handle_state_file (internal_t_data *itdata, char *filename, char *content)
 	  	  {
 	  	  	if (strcmp(content, "false") == 0)
 	  	  	  {
-				if (atomic_compare_exchange_weak(&rec, (_Bool[]) { true }, false))
+				if (atomic_compare_exchange_weak (&itdata->is_recording, (_Bool[]) { true }, false))
 				  {
 			        s = clock_gettime (CLOCK_REALTIME, &itdata->end);
 			        if (s != 0)
-			        	printf("recorded video\n");
+			        	printf ("recorded video\n");
 			       	else
 			       	  {
 						double elapsed = (end.tv_sec-start.tv_sec) * 1E9 + end.tv_nsec-start.tv_nsec;
-			        	printf("recorded video of length %lf seconds\n", elapsed / 1E9);
+			        	printf ("recorded video of length %lf seconds\n", elapsed / 1E9);
 			       	  }			        
 				  }
 	  	  	  }
 	  	  	else if (strcmp(content, "true") == 0)
 	  	  	  {
-	  	  	  	printf("started recording\n");
+	  	  	  	printf ("started recording\n");
 	  	  	  	s = clock_gettime (CLOCK_REALTIME, &itdata->start);
 	  	  	  }
 	  	  }
 	  }
+}
+
+/* Helper function to create picam hooks on record event */
+static void
+handle_record_event (internal_t_data *itdata, uint64_t u)
+{
+	int s;
+
+	switch (u)
+      {
+      	case PICAM_START_RECORD:
+      		s = touch(itdata->picam_start_hook);
+      		break;
+      	case PICAM_STOP_RECORD:
+      		s = touch(itdata->picam_stop_hook);
+      		break;
+      	default:
+      		errno = EINVAL;
+      		s = -1;
+      		break;
+      }
+
+    if (s != 0)
+    	log_error("could not handle record event");
 }
 
 /* Helper function to initialize inotify event */

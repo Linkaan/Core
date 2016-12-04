@@ -25,6 +25,6 @@
 #define _MOTION_H_
 
 /* This function is invoked by core as the timer thread is created */
-extern void on_motion_detect (void *arg);
+extern void on_motion_detect (void *);
 
 #endif /* _MOTION_H_ */

@@ -32,6 +32,6 @@ typedef struct
   } internal_t_data;
 
 /* This function is invoked by core as the timer thread is created */
-extern void *thread_timeout_start (void *arg);
+extern void *thread_timeout_start (void *);
 
 #endif /* _TIMEOUT_H_ */
