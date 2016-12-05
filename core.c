@@ -25,38 +25,37 @@
 
 #include <signal.h>
 #include <semaphore.h>
+#include <stdatomic.h>
 #include <pthread.h>
+#include <sys/timerfd.h>
+#include <sys/eventfd.h>
+#include <fcntl.h>
 #include <stdio.h>
+#include <stdbool.h>
+#include <unistd.h>
 #include <stdlib.h>
 #include <stdint.h>
+#include <string.h>
 #include <errno.h>
 
 #include <wiringPi/wiringPi.h>
 
-#include "picam.h"
+#include "picam_state.h"
+#include "motion.h"
 #include "timeout.h"
 #include "common.h"
 
 /* The PIR sensor is wired to the physical pin 31 (wiringPi pin 21) */
 #define PIR_PIN 21
 
-/* Helper macro to attempt joining a thread, if a timeout runs out it shall
-   cancel the thread */
-#define join_or_cancel_thread(t) \
-		s = pthread_timedjoin_np(t, NULL, &ts); \
-   		if (s != 0) \
-   		  { \
-   		    s = pthread_cancel(t); \
-   		    if (s != 0) \
-   		    	log_error ("error in pthread_cancel"); \
-   		  }
-
 /* Forward declarations used in this file. */
-static void do_cleanup (void);
+static void do_cleanup (struct thread_data *tdata);
 
 static int setup_thread_attr (struct thread_data *);
 static int create_timer_thread (struct thread_data *);
 static int setup_wiringPi (struct thread_data *);
+
+static void join_or_cancel_thread (pthread_t, struct timespec *);
 
 /* Non-zero means we should exit the program as soon as possible */
 static sem_t keep_going;
@@ -92,7 +91,23 @@ handle_signals ()
 		sigaction (SIGTERM, &new_action, NULL);
 }
 
-/* Helper function to initialize thread attributes and condition variables  */
+/* Helper function to attempt joining a thread, if a timeout runs out it shall
+   cancel the thread */
+static void
+join_or_cancel_thread (pthread_t t, struct timespec *ts)
+{
+	int s;
+
+	s = pthread_timedjoin_np (t, NULL, ts);
+	if (s != 0)
+	  {
+	    s = pthread_cancel (t);
+	    if (s != 0)
+	    	log_error ("error in pthread_cancel");
+	  }
+}
+
+/* Helper function to initialize thread attributes and condition variables */
 static int
 setup_thread_attr (struct thread_data *tdata)
 {
@@ -142,6 +157,7 @@ create_timer_thread (struct thread_data *tdata)
 {
 	int s;
 
+	tdata->is_recording = ATOMIC_VAR_INIT(false);
 	s = pthread_create (&tdata->timer_t, &tdata->attr, &thread_timeout_start,
 						tdata);
 	if (s != 0)
@@ -253,17 +269,18 @@ main (void)
     if (s != 0)
       {
 		log_error ("error in clock_gettime");
-	    s = pthread_cancel (timer_t);
+	    s = pthread_cancel (tdata.timer_t);
 	    if (s != 0)
 	    	log_error ("error in pthread_cancel");
       }  		
    	else
    	  {
    		ts.tv_sec += 5;
-   		join_or_cancel_thread (timer_t);
+   		join_or_cancel_thread (tdata.timer_t, &ts);
+   		join_or_cancel_thread (tdata.timer_t, &ts);
    	  }
 
-   	s = pthread_mutex_destroy (&tdata->record_mutex);
+   	s = pthread_mutex_destroy (&tdata.record_mutex);
 	if (s != 0)
 		log_error ("error in pthread_mutex_destroy");
 
@@ -284,4 +301,10 @@ main (void)
 		log_error ("error in pthread_attr_destroy");
 
 	return 0;
+}
+
+static
+void do_cleanup (struct thread_data *tdata)
+{
+
 }

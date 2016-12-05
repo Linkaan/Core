@@ -23,6 +23,7 @@
 
 #include <stdio.h>
 #include <stdlib.h>
+#include <stdbool.h>
 #include <errno.h>
 #include <sys/types.h>
 #include <sys/stat.h>
@@ -30,17 +31,38 @@
 #include <unistd.h>
 #include <stdatomic.h>
 #include <sys/inotify.h>
+#include <poll.h>
 #include <pthread.h>
 #include <dirent.h>
 
-#include "picam.h"
+#include "picam_state.h"
 #include "touch.h"
 #include "common.h"
+
+/* Used internally by thread to store allocated resources  */
+static struct internal_t_data {  	
+	_Bool 		watch_state_enabled;
+	char		*dir;
+	char 		*path;
+	char 		*content;
+	int 		wd;
+	FILE 		*fp;
+	atomic_bool	*is_recording;
+	int 		inotify_fd;
+	size_t 		dir_strlen;
+	char 		*picam_start_hook;
+	char 		*picam_stop_hook;
+	uint32_t 	inotify_mask;
+	struct 		timespec start;
+	struct 		timespec end;
+	struct 		stat st;
+	struct 		pollfd poll_fds[3];
+};
 
 /* Forward declarations used in this file. */
 static void cleanup_handler (void *);
 
-static void handle_state_file_created ();
+static void handle_state_file_created (struct internal_t_data *);
 static void handle_state_file (struct internal_t_data *, const char *, const char *);
 static void handle_record_event (struct internal_t_data *, const uint64_t);
 
@@ -48,7 +70,7 @@ static int setup_inotify (struct internal_t_data *);
 
 /* Start routine for picam thread */
 void *
-thread_picam_start (struct thread_data *tdata)
+thread_picam_start (void *arg)
 {
 	int s, events;
 	uint64_t u;
@@ -59,10 +81,12 @@ thread_picam_start (struct thread_data *tdata)
 	pthread_cleanup_push (&cleanup_handler, &itdata);
 
 	/* TODO: add these values to a config file */
-	asprintf (itdata.dir, PICAM_STATE_DIR);
-	asprintf (itdata.picam_start_hook, PICAM_START_HOOK);
-	asprintf (itdata.picam_stop_hook, PICAM_STOP_HOOK);
+	asprintf (&itdata.dir, PICAM_STATE_DIR);
+	asprintf (&itdata.picam_start_hook, PICAM_START_HOOK);
+	asprintf (&itdata.picam_stop_hook, PICAM_STOP_HOOK);
+	itdata.dir_strlen = strlen(itdata.dir);
 
+	itdata.is_recording = &tdata->is_recording;
 	s = setup_inotify (&itdata);
 	if (s != 0)
 		itdata.watch_state_enabled = false;
@@ -82,7 +106,7 @@ thread_picam_start (struct thread_data *tdata)
 	while (1)
 	  {
 	  	/* Passing -1 to poll as third argument means to block (INFTIM) */
-	  	s = poll (&itdata.poll_fds, 3, -1);
+	  	s = poll (itdata.poll_fds, 3, -1);
 
 	  	if (s < 0)
 	  		log_error ("poll failed");
@@ -90,7 +114,7 @@ thread_picam_start (struct thread_data *tdata)
 	  	  {
             if (itdata.poll_fds[0].revents & events)
               {
-              	handle_state_file_created ();              	
+              	handle_state_file_created (&itdata);              	
               }
             else /* tdata->timerpipe[0] or tdata->record_eventfd */
               {
@@ -101,7 +125,7 @@ thread_picam_start (struct thread_data *tdata)
                 if (itdata.poll_fds[1].revents & events)
               		break;
 
-                handle_record_event (itdata, u);
+                handle_record_event (&itdata, u);
               }
           }
       }
@@ -114,56 +138,59 @@ thread_picam_start (struct thread_data *tdata)
 
 /* When there is a inotify event to be read */
 static void
-handle_state_file_created ()
+handle_state_file_created (struct internal_t_data *itdata)
 {
+	int s;
+
 	struct inotify_event event;
-	s = read (fd, &event, sizeof (struct inotify_event));
+	s = read (itdata->inotify_fd, &event, sizeof (struct inotify_event));
     if (s != sizeof (struct inotify_event))
         log_error ("read failed");
     if (event.len)
       {
-      	if (event.mask & itdata.inotify_mask)
+      	if (event.mask & itdata->inotify_mask)
       	  {
       	  	/* Ignore all directories */
       	  	if (!(event.mask & IN_ISDIR))
       	  	  {
       	  	  	/* We add 2 bytes for the delimiter and nul-terminator */
-      	  	  	int path_len = itdata.dir_strlen + strlen (event.name) + 2;
-      	  	  	itdata.path = malloc (path_len);
-      	  	  	if (itdata.path == NULL)
+      	  	  	int path_len = itdata->dir_strlen + strlen (event.name) + 2;
+      	  	  	itdata->path = malloc (path_len);
+      	  	  	if (itdata->path == NULL)
       	  	  	  log_error ("malloc for file path failed");
       	  	  	else
       	  	  	  {
-      	  	  	  	s = snprintf (itdata.path, path_len, "%s/%s", itdata.dir, event.name);
+      	  	  	  	s = snprintf (itdata->path, path_len, "%s/%s", itdata->dir, event.name);
 
-      	  	  	  	itdata.fp = fopen (itdata.path, "rb");
-      	  	  	  	if (itdata.fp)
+      	  	  	  	itdata->fp = fopen (itdata->path, "rb");
+      	  	  	  	if (itdata->fp)
       	  	  	  	  {
-      	  	  	  	  	fseek (itdata.fp, 0, SEEK_END);
-      	  	  	  	  	long content_len = ftell (itdata.fp);
-      	  	  	  	  	fseek (itdata.fp. 0, SEEK_SET);
+      	  	  	  	  	fseek (itdata->fp, 0, SEEK_END);
+      	  	  	  	  	long content_len = ftell (itdata->fp);
+      	  	  	  	  	fseek (itdata->fp, 0, SEEK_SET);
 
-      	  	  	  	  	itdata.content = malloc (content_len + 1);                  	  	  	  	  	
-      	  	  	  	  	if (itdata.content)
+      	  	  	  	  	itdata->content = malloc (content_len + 1);                  	  	  	  	  	
+      	  	  	  	  	if (itdata->content)
       	  	  	  	  	  {
-      	  	  	  	  	  	fread (itdata.content, 1, content_len, itdata.fp);      	  	  	  	  	  	
-      	  	  	  	  	  	itdata.content[content_len] = '\0';
+      	  	  	  	  	  	fread (itdata->content, 1, content_len, itdata->fp);      	  	  	  	  	  	
+      	  	  	  	  	  	itdata->content[content_len] = '\0';
       	  	  	  	  	  }
       	  	  	  	  	else
       	  	  	  	  		log_error ("malloc for file content failed");
-      	  	  	  	  	fclose (itdata.fp);
+      	  	  	  	  	fclose (itdata->fp);
+      	  	  	  	  	itdata->fp = NULL;
       	  	  	  	  }
       	  	  	  	else
       	  	  	  		log_error ("fopen failed");
-      	  	  	  	handle_state_file (event.name, itdata.content);
-      	  	  	  	free (itdata.content);
-      	  	  	  	itdata.content = NULL;
+      	  	  	  	handle_state_file (itdata, event.name, itdata->content);
+      	  	  	  	free (itdata->content);
+      	  	  	  	itdata->content = NULL;
       	  	  	  }
-      	  	  	s = unlink (itdata.path);
+      	  	  	s = unlink (itdata->path);
       	  	  	if (s != 0)
       	  	  		log_error ("unlink failed");
-      	  	  	free (s.path);
-      	  	  	s.path = NULL;
+      	  	  	free (itdata->path);
+      	  	  	itdata->path = NULL;
       	  	  }
       	  }
       }
@@ -181,14 +208,14 @@ handle_state_file (struct internal_t_data *itdata, const char *filename, const c
 	  	  {
 	  	  	if (strcmp(content, "false") == 0)
 	  	  	  {
-				if (atomic_compare_exchange_weak (&itdata->is_recording, (_Bool[]) { true }, false))
+				if (atomic_compare_exchange_weak (itdata->is_recording, (_Bool[]) { true }, false))
 				  {
 			        s = clock_gettime (CLOCK_REALTIME, &itdata->end);
 			        if (s != 0)
 			        	printf ("recorded video\n");
 			       	else
 			       	  {
-						double elapsed = (end.tv_sec-start.tv_sec) * 1E9 + end.tv_nsec-start.tv_nsec;
+						double elapsed = (itdata->end.tv_sec - itdata->start.tv_sec) * 1E9 + itdata->end.tv_nsec - itdata->start.tv_nsec;
 			        	printf ("recorded video of length %lf seconds\n", elapsed / 1E9);
 			       	  }			        
 				  }
@@ -217,8 +244,8 @@ handle_record_event (struct internal_t_data *itdata, const uint64_t u)
       		break;
       	case PICAM_STOP_RECORD:
       		s = touch (itdata->picam_stop_hook);
-      		if (s == 0 && !itdata.watch_state_enabled)
-      			atomic_store (&tdata->is_recording, false);
+      		if (s == 0 && !itdata->watch_state_enabled)
+      			atomic_store (itdata->is_recording, false);
       		break;
       	default:
       		errno = EINVAL;
@@ -244,7 +271,7 @@ setup_inotify (struct internal_t_data *itdata)
 	  }
 	itdata->inotify_fd = s;
 
-	s = stat (itdata->dir);
+	s = stat (itdata->dir, &itdata->st);
 	if (s < 0)
 	  {
 	  	if (errno == ENOENT)
@@ -260,7 +287,7 @@ setup_inotify (struct internal_t_data *itdata)
 	  }
 	else
       {
-        if (!S_ISDIR (st.st_mode))
+        if (!S_ISDIR (itdata->st.st_mode))
           {
       	  	log_error ("state path is not a directory");
       	  	return 1;
@@ -285,7 +312,7 @@ cleanup_handler(void *arg)
 {
     struct internal_t_data *itdata = arg;
 
-    inotify_rm_watch (itdata->fd, itdata->wd);
+    inotify_rm_watch (itdata->inotify_fd, itdata->wd);
     close (itdata->inotify_fd);
 
     free (itdata->dir);
@@ -297,6 +324,6 @@ cleanup_handler(void *arg)
     if (itdata->content)
     	free (itdata->content);
 
-    if (itdata->fp > -1)
-    	fclose (itdata->fp)
+    if (itdata->fp)
+    	fclose (itdata->fp);
 }

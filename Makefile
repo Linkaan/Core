@@ -22,8 +22,9 @@
 ##############################################################################
 
 INCLUDE ?= -I.
-CFLAGS := $(INCLUDE) -std=gnu11 -g -Wall -Wextra
-LDFLAGS := -lwiringPi -lpthread
+LINKS ?= -L.
+CFLAGS := $(INCLUDE) -std=gnu11 -g -Wall -Wextra -D _GNU_SOURCE
+LDFLAGS := $(LINKS) -lwiringPi -lpthread
 SOURCES := core.c motion.c picam_state.c timeout.c touch.c
 HEADERS := common.h motion.h picam_state.h tiemout.h touch.h 
 OBJECTS=$(SOURCES:.c=.o)

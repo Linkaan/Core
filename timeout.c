@@ -25,6 +25,7 @@
 #include <stdint.h>
 #include <stdio.h>
 #include <stdbool.h>
+#include <string.h>
 
 #include <wiringPi/wiringPi.h>
 
@@ -33,6 +34,12 @@
 
 /* Forward declarations used in this file. */
 static void cleanup_handler (void *);
+
+/* Used internally by thread to store allocated resources  */
+static struct internal_t_data {
+    pthread_mutex_t record_mutex;
+    struct pollfd poll_fds[2];
+};
 
 /* Start routine for timer thread */
 void *
@@ -72,8 +79,8 @@ thread_timeout_start(void *arg)
             if (s != sizeof (uint64_t))
                 log_error ("read failed");
 
-            pthread_cleanup_push (pthread_mutex_unlock, (void *) &itdata->record_mutex);
-            pthread_mutex_lock (&itdata->record_mutex);
+            pthread_cleanup_push (pthread_mutex_unlock, (void *) &itdata.record_mutex);
+            pthread_mutex_lock (&itdata.record_mutex);
 
             /* Instead of using a pthread condition variable we use a eventfd
                object to notify other threads because we can then poll on
@@ -83,7 +90,7 @@ thread_timeout_start(void *arg)
             if (s != sizeof (uint64_t))
                 log_error ("write failed");
 
-            pthread_mutex_unlock (&itdata->record_mutex);
+            pthread_mutex_unlock (&itdata.record_mutex);
             pthread_cleanup_pop (0);
 
             /* If there is data to read on poll_fds, we shall exit */

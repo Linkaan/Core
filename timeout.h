@@ -24,11 +24,8 @@
 #ifndef _TIMEOUT_H_
 #define _TIMEOUT_H_
 
-/* Used internally by thread to store allocated resources  */
-struct internal_t_data {
-  	pthread_t_mutex record_mutex;
-  	struct pollfd poll_fds[2];
-};
+#include <pthread.h>
+#include <poll.h>
 
 /* This function is invoked by core as the timer thread is created */
 extern void *thread_timeout_start (void *);

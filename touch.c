@@ -42,12 +42,16 @@
 #include <stdio.h>
 #include <stdlib.h>
 #include <unistd.h>
+#include <string.h>
 #include <fcntl.h>
+#include <sys/un.h>
+#include <sys/stat.h>
+#include <sys/ioctl.h>
 
 #include "common.h"
 
 /* Forward declarations used in this file. */
-int fdutimensat(int, int, char const *, struct timespec const ()[2], int);
+int fdutimensat(int, int, char const *, struct timespec const ts[2], int);
 
 /*
  * Create file or update the time of file according to the options given.

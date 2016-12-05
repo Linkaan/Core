@@ -24,6 +24,10 @@
 #ifndef _COMMON_H_
 #define _COMMON_H_
 
+#include <pthread.h>
+#include <stdatomic.h>
+#include <errno.h>
+
 /* Define _GNU_SOURCE for pthread_timedjoin_np and asprintf */
 #ifndef _GNU_SOURCE
 #define _GNU_SOURCE
@@ -31,14 +35,16 @@
 
 /* Temporary defs before config file is setup */
 #define PICAM_STATE_DIR "/"
+#define PICAM_STOP_HOOK "/"
+#define PICAM_START_HOOK "/"
 
 /* Used in record event to start or stop recording */
 #define PICAM_START_RECORD ~0ULL
 #define PICAM_STOP_RECORD 0
 
-#define log_error (msg) \
-		fprintf(stderr, "%s: %s: %d: %s: %s\n", __progname, \
-				__FILE__, __LINE__, msg, strerror(errno))
+#define log_error(msg)\
+		fprintf(stderr, "%s: %s: %d: %s: %s\n", __progname,\
+				__FILE__, __LINE__, msg, strerror (errno))
 
 /* String containing name the program is called with.
    To be initialized by main(). */
@@ -50,10 +56,11 @@ struct thread_data {
   	int 			timerfd;
   	int 			timerpipe[2];
   	int 			record_eventfd;
+  	atomic_bool		is_recording;
   	pthread_t 		timer_t;
   	pthread_t 		picam_t;
 	pthread_attr_t	attr;
-	pthread_t_mutex record_mutex;
+	pthread_mutex_t record_mutex;
 };
 
 #endif /* _COMMON_H_ */

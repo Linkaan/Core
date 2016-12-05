@@ -24,25 +24,6 @@
 #ifndef _PICAM_H_
 #define _PICAM_H_
 
-#include <stdint.h>
-#include <stdbool.h>
-
-/* Used internally by thread to store allocated resources  */
-struct internal_t_data {  	
-	_Bool 		watch_state_enabled;
-	char		*dir;
-	char 		*path;
-	char 		*content;
-	int 		wd;
-	int 		fp;
-	int 		inotify_fd;
-	char 		*picam_start_hook;
-	char 		*picam_stop_hook;
-	uint32_t 	inotify_mask;
-	struct 		stat st;
-	struct 		pollfd poll_fds[3];
-};
-
 /* This function is invoked by core as the timer thread is created */
 extern void *thread_picam_start (void *);
 
