@@ -109,7 +109,7 @@ join_or_cancel_thread (pthread_t t, struct timespec *ts)
 	s = pthread_timedjoin_np (t, NULL, ts);
 	if (s != 0)
 	  {
-	  	printf ("[DEBUG] pthread_timedjoin_np non-zero %s\n", strerror(errno));
+	  	printf ("[DEBUG] pthread_timedjoin_np non-zero %s\n", strerror(s));
 	    s = pthread_cancel (t);
 	    if (s != 0)
 	    	log_error ("error in pthread_cancel");
@@ -311,7 +311,7 @@ main (void)
    	  {
    		ts.tv_sec += 5;
    		join_or_cancel_thread (tdata.timer_t, &ts);
-   		join_or_cancel_thread (tdata.timer_t, &ts);
+   		join_or_cancel_thread (tdata.picam_t, &ts);
    	  }
 
    	s = pthread_mutex_destroy (&tdata.record_mutex);
