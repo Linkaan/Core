@@ -114,7 +114,7 @@ setup_thread_attr (struct thread_data *tdata)
 	int s;
 
 	s = pthread_mutex_init (&tdata->record_mutex, NULL);
-	if (s != 0)
+	if (s < 0)
 	  {
 	    log_error ("error in pthread_mutex_init");
 		do_cleanup (tdata);
@@ -122,7 +122,7 @@ setup_thread_attr (struct thread_data *tdata)
 	  }
 
 	s = eventfd (0, 0);
-	if (s != 0)
+	if (s < 0)
 	  {
 	    log_error ("error in eventfd");
 		do_cleanup (tdata);
@@ -132,7 +132,7 @@ setup_thread_attr (struct thread_data *tdata)
 
 	/* Initialize thread creation attributes */
 	s = pthread_attr_init (&tdata->attr);
-	if (s != 0)
+	if (s < 0)
 	  {
 		log_error ("error in pthread_attr_init");
 		do_cleanup (tdata);
@@ -142,7 +142,7 @@ setup_thread_attr (struct thread_data *tdata)
 	/* Explicitly create threads as joinable, only possible error is EINVAL
 	   if the second parameter (detachstate) is invalid */
 	s = pthread_attr_setdetachstate (&tdata->attr, PTHREAD_CREATE_JOINABLE);
-	if (s != 0)
+	if (s < 0)
 	  {
 		log_error ("error in pthread_attr_setdetachstate");
 		do_cleanup (tdata);		
@@ -160,7 +160,7 @@ create_timer_thread (struct thread_data *tdata)
 	tdata->is_recording = ATOMIC_VAR_INIT(false);
 	s = pthread_create (&tdata->timer_t, &tdata->attr, &thread_timeout_start,
 						tdata);
-	if (s != 0)
+	if (s < 0)
 	  {
 		log_error ("error creating timeout thread");
 		do_cleanup (tdata);
@@ -176,7 +176,7 @@ setup_wiringPi (struct thread_data *tdata)
 
 	/* Initialize wiringPi with default pin numbering scheme */
 	s = wiringPiSetup ();
-	if (s != 0)
+	if (s < 0)
 	  {
 		log_error ("error in wiringPiSetup");
 		do_cleanup (tdata);
@@ -186,7 +186,7 @@ setup_wiringPi (struct thread_data *tdata)
 	/* Register a interrupt handler on the pin numbered as PIR_PIN */
 	tdata->pir_pin = PIR_PIN;
 	s = wiringPiISR (tdata->pir_pin, INT_EDGE_BOTH, &on_motion_detect, tdata);
-	if (s != 0)
+	if (s < 0)
 	  {
 		log_error ("error in wiringPiISR");
 		do_cleanup (tdata);
@@ -266,7 +266,7 @@ main (void)
 
 	/* Fetch current time and put it in ts struct */
 	s = clock_gettime (CLOCK_REALTIME, &ts);
-    if (s != 0)
+    if (s < 0)
       {
 		log_error ("error in clock_gettime");
 	    s = pthread_cancel (tdata.timer_t);
@@ -281,23 +281,23 @@ main (void)
    	  }
 
    	s = pthread_mutex_destroy (&tdata.record_mutex);
-	if (s != 0)
+	if (s < 0)
 		log_error ("error in pthread_mutex_destroy");
 
    	s = close (tdata.record_eventfd);
-   	if (s != 0)
+   	if (s < 0)
    		log_error ("error in close");
 
    	s = close (tdata.timerpipe[1]);
-   	if (s != 0)
+   	if (s < 0)
    		log_error ("error in close");   
 
    	s = close (tdata.timerpipe[0]);
-   	if (s != 0)
+   	if (s < 0)
    		log_error ("error in close");
 
    	s = pthread_attr_destroy (&tdata.attr);
-	if (s != 0)
+	if (s < 0)
 		log_error ("error in pthread_attr_destroy");
 
 	return 0;

@@ -88,7 +88,7 @@ thread_picam_start (void *arg)
 
 	itdata.is_recording = &tdata->is_recording;
 	s = setup_inotify (&itdata);
-	if (s != 0)
+	if (s < 0)
 		itdata.watch_state_enabled = false;
 
 	memset (&itdata.poll_fds, 0, sizeof (itdata.poll_fds));
@@ -187,7 +187,7 @@ handle_state_file_created (struct internal_t_data *itdata)
       	  	  	  	itdata->content = NULL;
       	  	  	  }
       	  	  	s = unlink (itdata->path);
-      	  	  	if (s != 0)
+      	  	  	if (s < 0)
       	  	  		log_error ("unlink failed");
       	  	  	free (itdata->path);
       	  	  	itdata->path = NULL;
@@ -211,7 +211,7 @@ handle_state_file (struct internal_t_data *itdata, const char *filename, const c
 				if (atomic_compare_exchange_weak (itdata->is_recording, (_Bool[]) { true }, false))
 				  {
 			        s = clock_gettime (CLOCK_REALTIME, &itdata->end);
-			        if (s != 0)
+			        if (s < 0)
 			        	printf ("recorded video\n");
 			       	else
 			       	  {
@@ -253,7 +253,7 @@ handle_record_event (struct internal_t_data *itdata, const uint64_t u)
       		break;
       }
 
-    if (s != 0)
+    if (s < 0)
     	log_error ("could not handle record event");
 }
 
@@ -294,7 +294,7 @@ setup_inotify (struct internal_t_data *itdata)
 		  }
       }
 
-    if (access (itdata->dir, R_OK) != 0)
+    if (access (itdata->dir, R_OK) < 0)
       {
       	log_error ("access failed");
       	return 1;
