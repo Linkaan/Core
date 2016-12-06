@@ -168,6 +168,21 @@ create_timer_thread (struct thread_data *tdata)
 	return s;
 }
 
+static int
+create_picam_thread (struct thread_data *tdata)
+{
+	int s;
+
+	s = pthread_create (&tdata->picam_t, &tdata->attr, &thread_picam_start,
+						tdata);
+	if (s < 0)
+	  {
+		log_error ("error creating picam thread");
+		do_cleanup (tdata);
+	  }
+	return s;	
+}
+
 /* Helper function to setup wiringPi and register an interrupt handler */
 static int
 setup_wiringPi (struct thread_data *tdata)
@@ -206,7 +221,15 @@ main (void)
 	/* Initialize keep_going as binary semaphore initially 0 */
 	sem_init (&keep_going, 0, 0);
 
-	handle_signals ();	
+	memset (&tdata, 0, sizeof (tdata));
+
+	handle_signals ();
+
+	s = setup_wiringPi (&tdata);
+	if (s != 0)
+	  {
+	    return 1;
+	  }
 
 	/* Initialize timer used for timeout on video recording */
 	tdata.timerfd = timerfd_create (CLOCK_REALTIME, 0);
@@ -238,7 +261,7 @@ main (void)
 	    return 1;
 	  }
 
-	s = setup_wiringPi (&tdata);
+	s = create_picam_thread (&tdata);
 	if (s != 0)
 	  {
 	    return 1;

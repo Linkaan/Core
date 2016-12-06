@@ -59,7 +59,8 @@ thread_timeout_start(void *arg)
        our cleanup handler */
     pthread_setcanceltype (PTHREAD_CANCEL_DEFERRED, NULL);
 
-	memset(&itdata.poll_fds, 0, sizeof (itdata.poll_fds));
+    memset (&itdata, 0, sizeof (itdata));
+	memset (&itdata.poll_fds, 0, sizeof (itdata.poll_fds));
 
 	itdata.poll_fds[0].fd = tdata->timerfd;
 	itdata.poll_fds[0].revents = 0;
@@ -73,7 +74,7 @@ thread_timeout_start(void *arg)
 	  	/* Passing -1 to poll as third argument means to block (INFTIM) */
 	  	s = poll (itdata.poll_fds, 2, -1);
 
-        printf ("[DEBUG] timeout thread poll returned %d\n", s);
+        printf ("[DEBUG] timeout thread poll returned %d (timerpipe revents %d, events %d)\n", s, itdata.poll_fds[1].revents & events, events);
 	  	if (s < 0)
 	  		log_error("poll failed");
 	  	else if (s > 0)

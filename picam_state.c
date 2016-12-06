@@ -80,6 +80,8 @@ thread_picam_start (void *arg)
 	pthread_setcanceltype (PTHREAD_CANCEL_DEFERRED, NULL);
 	pthread_cleanup_push (&cleanup_handler, &itdata);
 
+	memset (&itdata, 0, sizeof (itdata));
+
 	/* TODO: add these values to a config file */
 	asprintf (&itdata.dir, PICAM_STATE_DIR);
 	asprintf (&itdata.picam_start_hook, PICAM_START_HOOK);
@@ -105,10 +107,12 @@ thread_picam_start (void *arg)
 
 	while (1)
 	  {
+		printf ("[DEBUG] picam thread listening on poll");
+
 	  	/* Passing -1 to poll as third argument means to block (INFTIM) */
 	  	s = poll (itdata.poll_fds, 3, -1);
 
-	  	printf ("[DEBUG] picam thread poll returned %d\n", s);
+	  	printf ("[DEBUG] picam thread poll returned %d (timerpipe revents %d, events %d)\n", s, itdata.poll_fds[1].revents & events, events);
 	  	if (s < 0)
 	  		log_error ("poll failed");
 	  	else if (s > 0)
