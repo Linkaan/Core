@@ -116,26 +116,18 @@ thread_picam_start (void *arg)
 	  		log_error ("poll failed");
 	  	else if (s > 0)
 	  	  {
-	  	  	/* Determine which fd has returned an event so that we can
-	  	  	   read from it and get data */
-	  	  	struct pollfd *rfd;
-	  	  	for (int i = 0; i < itdata.poll_fds_len; i++)
-	  	  	  {
-	  	  	  	if (itdata.poll_fds[i].revents)
-	  	  	  	  {
-	  	  	  	  	rfd = &itdata.poll_fds[i];
-	  	  	  		break;
-	  	  	  	  }
-	  	  	  }
             if (itdata.poll_fds[0].revents & events)
               {
               	handle_state_file_created (&itdata);              	
               }
             else /* tdata->timerpipe[0] or tdata->record_eventfd */
               {
-                s = read (rfd->fd, &u, sizeof (uint64_t));
-                if (s != sizeof (uint64_t))
-                    log_error ("read failed");
+	            if (itdata.poll_fds[2].revents & events)
+	              {
+	                s = read (rfd->fd, &u, sizeof (uint64_t));
+	                if (s != sizeof (uint64_t))
+	                    log_error ("read failed");
+	              }
 
                 if (itdata.poll_fds[1].revents & events)
                   {

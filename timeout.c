@@ -80,18 +80,12 @@ thread_timeout_start(void *arg)
 	  		log_error("poll failed");
 	  	else if (s > 0)
 	  	  {
-            struct pollfd *rfd;
-            for (int i = 0; i < itdata.poll_fds_len; i++)
+            if (itdata.poll_fds[0].revents & events)
               {
-                if (itdata.poll_fds[i].revents)
-                  {
-                    rfd = &itdata.poll_fds[i];
-                    break;
-                  }
+                s = read (rfd->fd, &u, sizeof (uint64_t));
+                if (s != sizeof (uint64_t))
+                    log_error ("read failed");
               }
-            s = read (rfd->fd, &u, sizeof (uint64_t));
-            if (s != sizeof (uint64_t))
-                log_error ("read failed");
 
             pthread_cleanup_push (&cleanup_handler, &itdata);
             pthread_mutex_lock (&itdata.record_mutex);
