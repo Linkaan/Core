@@ -48,7 +48,7 @@ on_motion_detect (void *arg)
 	/* ----------- TEMP ----------- */
 	printf ("[DEBUG]\n");
 	unsigned char *p = (unsigned char *) arg;
-    for (int i = 0; i < n; i++)
+    for (int i = 0; i < sizeof (*arg); i++)
         printf ("%02x\n", p[i]);
     printf("\n");
 
