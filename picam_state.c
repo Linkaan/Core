@@ -50,6 +50,7 @@ struct internal_t_data {
 	atomic_bool	*is_recording;
 	int 		inotify_fd;
 	size_t 		dir_strlen;
+	int 		poll_fds_len;
 	char 		*picam_start_hook;
 	char 		*picam_stop_hook;
 	uint32_t 	inotify_mask;
@@ -95,20 +96,18 @@ thread_picam_start (void *arg)
 
 	memset (&itdata.poll_fds, 0, sizeof (itdata.poll_fds));
 
-	itdata.poll_fds[0].fd = itdata.inotify_fd;
-	itdata.poll_fds[0].revents = 0;
-	itdata.poll_fds[0].events = events = POLLIN | POLLPRI;
+	itdata.poll_fds[itdata.poll_fds_len].fd = itdata.inotify_fd;
+	itdata.poll_fds[itdata.poll_fds_len].revents = 0;
+	itdata.poll_fds[itdata.poll_fds_len++].events = events = POLLIN | POLLPRI;
 
-	itdata.poll_fds[1] = itdata.poll_fds[0];
-	itdata.poll_fds[1].fd = tdata->timerpipe[0];
+	itdata.poll_fds[itdata.poll_fds_len] = itdata.poll_fds[0];
+	itdata.poll_fds[itdata.poll_fds_len++].fd = tdata->timerpipe[0];
 
-	itdata.poll_fds[2] = itdata.poll_fds[0];
-	itdata.poll_fds[2].fd = tdata->record_eventfd;
+	itdata.poll_fds[itdata.poll_fds_len] = itdata.poll_fds[0];
+	itdata.poll_fds[itdata.poll_fds_len++].fd = tdata->record_eventfd;
 
 	while (1)
 	  {
-		printf ("[DEBUG] picam thread listening on poll");
-
 	  	/* Passing -1 to poll as third argument means to block (INFTIM) */
 	  	s = poll (itdata.poll_fds, 3, -1);
 
@@ -117,13 +116,24 @@ thread_picam_start (void *arg)
 	  		log_error ("poll failed");
 	  	else if (s > 0)
 	  	  {
+	  	  	/* Determine which fd has returned an event so that we can
+	  	  	   read from it and get data */
+	  	  	struct pollfd *rfd;
+	  	  	for (int i = 0; i < itdata.poll_fds_len; i++)
+	  	  	  {
+	  	  	  	if (itdata.poll_fds[i].revents)
+	  	  	  	  {
+	  	  	  	  	rfd = &itdata.poll_fds[i];
+	  	  	  		break;
+	  	  	  	  }
+	  	  	  }
             if (itdata.poll_fds[0].revents & events)
               {
               	handle_state_file_created (&itdata);              	
               }
             else /* tdata->timerpipe[0] or tdata->record_eventfd */
               {
-                s = read (itdata.poll_fds[0].fd, &u, sizeof (uint64_t));
+                s = read (rfd->fd, &u, sizeof (uint64_t));
                 if (s != sizeof (uint64_t))
                     log_error ("read failed");
 

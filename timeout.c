@@ -39,8 +39,9 @@ static void cleanup_handler (void *);
 
 /* Used internally by thread to store allocated resources  */
 struct internal_t_data {
+    int             poll_fds_len;
     pthread_mutex_t record_mutex;
-    struct pollfd poll_fds[2];
+    struct pollfd   poll_fds[2];
 };
 
 /* Start routine for timer thread */
@@ -62,12 +63,12 @@ thread_timeout_start(void *arg)
     memset (&itdata, 0, sizeof (itdata));
 	memset (&itdata.poll_fds, 0, sizeof (itdata.poll_fds));
 
-	itdata.poll_fds[0].fd = tdata->timerfd;
-	itdata.poll_fds[0].revents = 0;
-	itdata.poll_fds[0].events = events = POLLIN | POLLPRI;
+	itdata.poll_fds[itdata.poll_fds_len].fd = tdata->timerfd;
+	itdata.poll_fds[itdata.poll_fds_len].revents = 0;
+	itdata.poll_fds[itdata.poll_fds_len++].events = events = POLLIN | POLLPRI;
 
-	itdata.poll_fds[1] = itdata.poll_fds[0];
-	itdata.poll_fds[1].fd = tdata->timerpipe[0];
+	itdata.poll_fds[itdata.poll_fds_len] = itdata.poll_fds[0];
+	itdata.poll_fds[itdata.poll_fds_len++].fd = tdata->timerpipe[0];
 
 	while (1)
 	  {
@@ -79,7 +80,16 @@ thread_timeout_start(void *arg)
 	  		log_error("poll failed");
 	  	else if (s > 0)
 	  	  {
-            s = read (itdata.poll_fds[0].fd, &u, sizeof (uint64_t));
+            struct pollfd *rfd;
+            for (int i = 0; i < itdata.poll_fds_len; i++)
+              {
+                if (itdata.poll_fds[i].revents)
+                  {
+                    rfd = &itdata.poll_fds[i];
+                    break;
+                  }
+              }
+            s = read (rfd->fd, &u, sizeof (uint64_t));
             if (s != sizeof (uint64_t))
                 log_error ("read failed");
 
@@ -97,7 +107,7 @@ thread_timeout_start(void *arg)
             pthread_mutex_unlock (&itdata.record_mutex);
             pthread_cleanup_pop (1);
 
-            /* If there is data to read on poll_fds, we shall exit */
+            /* If there is data to read on timerpipe, we shall exit */
             if (itdata.poll_fds[1].revents & events)
               {
                 printf ("[DEBUG] timeout thread notified to exit!\n");
