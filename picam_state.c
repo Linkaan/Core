@@ -40,7 +40,7 @@
 #include "common.h"
 
 /* Used internally by thread to store allocated resources  */
-static struct internal_t_data {  	
+struct internal_t_data {  	
 	_Bool 		watch_state_enabled;
 	char		*dir;
 	char 		*path;

@@ -21,6 +21,8 @@
  *****************************************************************************
  */
 
+#include <unistd.h>
+#include <sys/timerfd.h>
 #include <stdint.h>
 #include <stdio.h>
 #include <stdbool.h>

@@ -34,9 +34,9 @@
 #endif
 
 /* Temporary defs before config file is setup */
-#define PICAM_STATE_DIR "/"
-#define PICAM_STOP_HOOK "/"
-#define PICAM_START_HOOK "/"
+#define PICAM_STATE_DIR "/home/tc/state"
+#define PICAM_STOP_HOOK "/home/tc/state/stop_record"
+#define PICAM_START_HOOK "/home/tc/state/start_record"
 
 /* Used in record event to start or stop recording */
 #define PICAM_START_RECORD ~0ULL

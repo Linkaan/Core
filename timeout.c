@@ -36,7 +36,7 @@
 static void cleanup_handler (void *);
 
 /* Used internally by thread to store allocated resources  */
-static struct internal_t_data {
+struct internal_t_data {
     pthread_mutex_t record_mutex;
     struct pollfd poll_fds[2];
 };
