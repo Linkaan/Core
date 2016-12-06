@@ -82,7 +82,7 @@ thread_timeout_start(void *arg)
 	  	  {
             if (itdata.poll_fds[0].revents & events)
               {
-                s = read (rfd->fd, &u, sizeof (uint64_t));
+                s = read (itdata.poll_fds[0].fd, &u, sizeof (uint64_t));
                 if (s != sizeof (uint64_t))
                     log_error ("read failed");
               }
