@@ -23,6 +23,8 @@
 
 #include <pthread.h>
 #include <stdint.h>
+#include <unistd.h>
+#include <fcntl.h>
 #include <stdio.h>
 #include <stdbool.h>
 #include <string.h>
@@ -56,7 +58,6 @@ thread_timeout_start(void *arg)
        where the thread gets cancelled in the middle of the execution of 
        our cleanup handler */
     pthread_setcanceltype (PTHREAD_CANCEL_DEFERRED, NULL);
-	pthread_cleanup_push (&cleanup_handler, &itdata);
 
 	memset(&itdata.poll_fds, 0, sizeof (itdata.poll_fds));
 
@@ -70,7 +71,7 @@ thread_timeout_start(void *arg)
 	while (1)
 	  {
 	  	/* Passing -1 to poll as third argument means to block (INFTIM) */
-	  	s = poll (&itdata.poll_fds, 2, -1);
+	  	s = poll (itdata.poll_fds, 2, -1);
 	  	if (s < 0)
 	  		log_error("poll failed");
 	  	else if (s > 0)
@@ -79,7 +80,7 @@ thread_timeout_start(void *arg)
             if (s != sizeof (uint64_t))
                 log_error ("read failed");
 
-            pthread_cleanup_push (pthread_mutex_unlock, (void *) &itdata.record_mutex);
+            pthread_cleanup_push (&cleanup_handler, &itdata);
             pthread_mutex_lock (&itdata.record_mutex);
 
             /* Instead of using a pthread condition variable we use a eventfd
@@ -91,16 +92,13 @@ thread_timeout_start(void *arg)
                 log_error ("write failed");
 
             pthread_mutex_unlock (&itdata.record_mutex);
-            pthread_cleanup_pop (0);
+            pthread_cleanup_pop (1);
 
             /* If there is data to read on poll_fds, we shall exit */
             if (itdata.poll_fds[1].revents & events)
               break;
 	  	  }
 	  }
-
-	/* Call our cleanup handler */
-	pthread_cleanup_pop (1);
 
 	return NULL;
 }
@@ -110,4 +108,6 @@ static void
 cleanup_handler(void *arg)
 {
     struct internal_t_data *itdata = arg;
+
+    pthread_mutex_unlock (&itdata->record_mutex);
 }

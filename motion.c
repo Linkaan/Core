@@ -22,6 +22,7 @@
  */
 
 #include <unistd.h>
+#include <fcntl.h>
 #include <sys/timerfd.h>
 #include <stdint.h>
 #include <stdio.h>
