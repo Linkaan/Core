@@ -72,6 +72,8 @@ thread_timeout_start(void *arg)
 	  {
 	  	/* Passing -1 to poll as third argument means to block (INFTIM) */
 	  	s = poll (itdata.poll_fds, 2, -1);
+
+        printf ("[DEBUG] timeout thread poll returned %d\n", s);
 	  	if (s < 0)
 	  		log_error("poll failed");
 	  	else if (s > 0)
@@ -96,7 +98,10 @@ thread_timeout_start(void *arg)
 
             /* If there is data to read on poll_fds, we shall exit */
             if (itdata.poll_fds[1].revents & events)
-              break;
+              {
+                printf ("[DEBUG] timeout thread notified to exit!\n");
+                break;
+              }
 	  	  }
 	  }
 

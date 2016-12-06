@@ -108,6 +108,7 @@ thread_picam_start (void *arg)
 	  	/* Passing -1 to poll as third argument means to block (INFTIM) */
 	  	s = poll (itdata.poll_fds, 3, -1);
 
+	  	printf ("[DEBUG] picam thread poll returned %d\n", s);
 	  	if (s < 0)
 	  		log_error ("poll failed");
 	  	else if (s > 0)
@@ -123,7 +124,10 @@ thread_picam_start (void *arg)
                     log_error ("read failed");
 
                 if (itdata.poll_fds[1].revents & events)
+                  {
+                  	printf ("[DEBUG] picam thread notified to exit!\n");
               		break;
+                  }
 
                 handle_record_event (&itdata, u);
               }

@@ -45,6 +45,13 @@ on_motion_detect (void *arg)
 	uint64_t u;
 	struct thread_data *tdata = arg;
 
+	/* ----------- TEMP ----------- */
+	printf ("[DEBUG]\n");
+	unsigned char *p = (unsigned char *) arg;
+    for (int i = 0; i < n; i++)
+        printf ("%02x\n", p[i]);
+    printf("\n");
+
 	if (digitalRead (tdata->pir_pin) == HIGH)
 	  {
 		reset_timer (tdata->timerfd, 5, 0);

@@ -264,6 +264,8 @@ main (void)
 		return 1;
 	  }
 
+	printf ("[DEBUG] main thread woke up, try to wake up other threads.\n");
+
 	/* Fetch current time and put it in ts struct */
 	s = clock_gettime (CLOCK_REALTIME, &ts);
     if (s < 0)
