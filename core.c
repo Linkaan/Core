@@ -64,7 +64,15 @@ static sem_t keep_going;
 void
 handle_sigint (int signum)
 {
-	sem_post(&keep_going);
+	struct sigaction new_action;
+
+	sem_post (&keep_going);
+
+	new_action.sa_handler = handle_sigint;
+	sigemptyset (&new_action.sa_mask);
+	new_action.sa_flags = 0;
+
+	sigaction (signum, &new_action, NULL);
 }
 
 /* Setup termination signals to exit gracefully */
@@ -101,6 +109,7 @@ join_or_cancel_thread (pthread_t t, struct timespec *ts)
 	s = pthread_timedjoin_np (t, NULL, ts);
 	if (s != 0)
 	  {
+	  	printf ("[DEBUG] pthread_timedjoin_np non-zero %s\n", strerror(errno));
 	    s = pthread_cancel (t);
 	    if (s != 0)
 	    	log_error ("error in pthread_cancel");
@@ -277,6 +286,8 @@ main (void)
 
 	sem_destroy (&keep_going);
 
+	printf ("[DEBUG] main thread woke up, try to wake up other threads.\n");
+
 	/* Write 8 bytes to notify all threads to exit */
 	u = ~0ULL;
 	s = write (tdata.timerpipe[1], &u, sizeof (uint64_t));
@@ -285,9 +296,7 @@ main (void)
 	    log_error ("error in write");
 	    do_cleanup (&tdata);
 		return 1;
-	  }
-
-	printf ("[DEBUG] main thread woke up, try to wake up other threads.\n");
+	  }	
 
 	/* Fetch current time and put it in ts struct */
 	s = clock_gettime (CLOCK_REALTIME, &ts);
