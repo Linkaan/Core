@@ -41,13 +41,16 @@
 #define PICAM_STOP_HOOK "/home/tc/state/stop_record"
 #define PICAM_START_HOOK "/home/tc/state/start_record"
 
+/* Simple macro used to print error messages with location */
 #define log_error(msg)\
 		fprintf(stderr, "%s: %s: %d: %s: %s\n", __progname,\
 				__FILE__, __LINE__, msg, strerror (errno))
 
+/* Extension of above macro, the do { ... } while(0) part is a workaround
+   for the issue of using this macro on a single line if statement without
+   a body */
 #define log_error_en(en, msg)\
-        errno = en;\
-        log_error (msg)
+        do { errno = en;log_error (msg) } while(0)
 
 /* String containing name the program is called with.
    To be initialized by main(). */

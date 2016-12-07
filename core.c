@@ -340,10 +340,7 @@ main (void)
 
    	s = pthread_mutex_destroy (&tdata.record_mutex);
 	if (s != 0)
-	  {
-	  	printf("return %d\n", s);
 		log_error_en (s, "error in pthread_mutex_destroy");
-	  }
 
    	s = close (tdata.record_eventfd);
    	if (s < 0)
@@ -359,10 +356,7 @@ main (void)
 
    	s = pthread_attr_destroy (&tdata.attr);
 	if (s != 0)
-	  {
-	  	printf("return %d\n", s);
 		log_error_en (s, "error in pthread_attr_destroy");
-	  }
 
 	return 0;
 }
