@@ -138,7 +138,7 @@ setup_thread_attr (struct thread_data *tdata)
 		return s;	
 	  }
 
-	s = eventfd (0, 0);
+	s = eventfd (0, EFD_CLOEXEC | EFD_NONBLOCK);
 	if (s < 0)
 	  {
 	    log_error ("error in eventfd");
@@ -236,7 +236,7 @@ main (void)
 	struct thread_data tdata;
 
 	/* Initialize keep_going as binary semaphore initially 0 */
-	sem_init (&keep_going, 0, EFD_CLOEXEC | EFD_NONBLOCK);
+	sem_init (&keep_going, 0, 0);
 
 	memset (&tdata, 0, sizeof (tdata));
 
