@@ -116,26 +116,25 @@ thread_picam_start (void *arg)
 	  		log_error ("poll failed");
 	  	else if (s > 0)
 	  	  {
-            if (itdata.poll_fds[0].revents & events)
+          	if (itdata.poll_fds[1].revents & events)
+              {
+              	printf ("[DEBUG] picam thread notified to exit!\n");
+          		break;
+              }
+            else if (itdata.poll_fds[0].revents & events)
               {
               	handle_state_file_created (&itdata);              	
               }
             else /* tdata->timerpipe[0] or tdata->record_eventfd */
               {
-              	if (itdata.poll_fds[1].revents & events)
-                  {
-                  	printf ("[DEBUG] picam thread notified to exit!\n");
-              		break;
-                  }
-
 	            if (itdata.poll_fds[2].revents & events)
 	              {
 	              	pthread_mutex_lock (&tdata->record_mutex);
 	                s = read (itdata.poll_fds[2].fd, &u, sizeof (uint64_t));
 	                if (s < 0)
 	                    log_error ("read failed");
-	                else
-	                	printf ("[DEBUG] read %" PRIu64 ", expected %" PRIu64 "\n", s, sizeof (uint64_t));
+	                else if (s != sizeof (uint64_t))
+	                	printf ("[DEBUG] read %d bytes, expected %d bytes\n", s, sizeof (uint64_t));
 	                pthread_mutex_unlock (&tdata->record_mutex);
 
 	                handle_record_event (&itdata, u);
@@ -144,7 +143,7 @@ thread_picam_start (void *arg)
           }
       }
 
-	/* Call our cleanup handler */1
+	/* Call our cleanup handler */
 	pthread_cleanup_pop (1);
 
 	return NULL;

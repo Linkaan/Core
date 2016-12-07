@@ -96,8 +96,8 @@ thread_timeout_start(void *arg)
                 s = write (tdata->record_eventfd, &u, sizeof (uint64_t));
                 if (s < 0)
                     log_error ("write failed");
-                else
-                    printf ("[DEBUG] read %" PRIu64 ", expected %" PRIu64 "\n", u, sizeof (uint64_t));
+                else if (s != sizeof (uint64_t))
+                    printf ("[DEBUG] wrote %d bytes, expected %d bytes\n", s, sizeof (uint64_t));
 
                 pthread_cleanup_pop (1);
               }
@@ -114,8 +114,8 @@ thread_timeout_start(void *arg)
                 s = read (itdata.poll_fds[0].fd, &u, sizeof (uint64_t));
                 if (s < 0)
                     log_error ("read failed");
-                else
-                    printf ("[DEBUG] read %" PRIu64 ", expected %" PRIu64 "\n", u, sizeof (uint64_t));
+                else if (s != sizeof (uint64_t))
+                    printf ("[DEBUG] read %d bytes, expected %d bytes\n", s, sizeof (uint64_t));
               }            
 	  	  }
 	  }

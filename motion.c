@@ -62,8 +62,8 @@ on_motion_detect (void *arg)
                 log_error ("write failed");
                 atomic_store (&tdata->is_recording, false);
               }
-            else
-                printf ("[DEBUG] read %" PRIu64 ", expected %" PRIu64 "\n", s, sizeof (uint64_t));
+            else if (s != sizeof (uint64_t))
+                printf ("[DEBUG] wrote %d bytes, expected %d bytes\n", s, sizeof (uint64_t));
             pthread_mutex_unlock (&tdata->record_mutex);
 		  }
 		else

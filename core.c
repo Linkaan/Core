@@ -89,7 +89,7 @@ handle_signals ()
 	/* Set up the structure to specify the new action. */
 	new_action.sa_handler = handle_sig;
 	sigemptyset (&new_action.sa_mask);
-	new_action.sa_flags = 0;
+	new_action.sa_flags = SA_RESTART;
 	
 	/* Handle termination signals but avoid handling signals previously set
 	   to be ignored */
@@ -315,8 +315,8 @@ main (void)
 	  {
 	    log_error ("error in write");
 	  }
-	else
-		printf ("[DEBUG] read %" PRIu64 ", expected %" PRIu64 "\n", u, sizeof (uint64_t));
+	else if (s != sizeof (uint64_t))
+		printf ("[DEBUG] wrote %d bytes, expected %d bytes\n", s, sizeof (uint64_t));
 
 	/* Fetch current time and put it in ts struct, we use the |= operator
 	   so that if previous call to read failed we will cancel threads */
@@ -340,7 +340,10 @@ main (void)
 
    	s = pthread_mutex_destroy (&tdata.record_mutex);
 	if (s != 0)
+	  {
+	  	printf("return %d\n", s);
 		log_error_en (s, "error in pthread_mutex_destroy");
+	  }
 
    	s = close (tdata.record_eventfd);
    	if (s < 0)
@@ -356,7 +359,10 @@ main (void)
 
    	s = pthread_attr_destroy (&tdata.attr);
 	if (s != 0)
+	  {
+	  	printf("return %d\n", s);
 		log_error_en (s, "error in pthread_attr_destroy");
+	  }
 
 	return 0;
 }
