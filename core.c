@@ -120,7 +120,7 @@ join_or_cancel_thread (pthread_t t, struct timespec *ts)
 	  	printf ("[DEBUG] pthread_timedjoin_np non-zero %s\n", strerror(s));
 	    s = pthread_cancel (t);
 	    if (s != 0)
-	    	log_error ("error in pthread_cancel");
+	    	log_error_en (s, "error in pthread_cancel");
 	  }
 }
 
@@ -131,9 +131,9 @@ setup_thread_attr (struct thread_data *tdata)
 	ssize_t s;
 
 	s = pthread_mutex_init (&tdata->record_mutex, NULL);
-	if (s < 0)
+	if (s != 0)
 	  {
-	    log_error ("error in pthread_mutex_init");
+	    log_error_en (s, "error in pthread_mutex_init");
 		do_cleanup (tdata);
 		return s;	
 	  }
@@ -149,9 +149,9 @@ setup_thread_attr (struct thread_data *tdata)
 
 	/* Initialize thread creation attributes */
 	s = pthread_attr_init (&tdata->attr);
-	if (s < 0)
+	if (s != 0)
 	  {
-		log_error ("error in pthread_attr_init");
+		log_error_en (s, "error in pthread_attr_init");
 		do_cleanup (tdata);
 		return s;
 	  }
@@ -159,9 +159,9 @@ setup_thread_attr (struct thread_data *tdata)
 	/* Explicitly create threads as joinable, only possible error is EINVAL
 	   if the second parameter (detachstate) is invalid */
 	s = pthread_attr_setdetachstate (&tdata->attr, PTHREAD_CREATE_JOINABLE);
-	if (s < 0)
+	if (s != 0)
 	  {
-		log_error ("error in pthread_attr_setdetachstate");
+		log_error_en (s, "error in pthread_attr_setdetachstate");
 		do_cleanup (tdata);		
 	  }
 
@@ -177,9 +177,9 @@ create_timer_thread (struct thread_data *tdata)
 	tdata->is_recording = ATOMIC_VAR_INIT(false);
 	s = pthread_create (&tdata->timer_t, &tdata->attr, &thread_timeout_start,
 						tdata);
-	if (s < 0)
+	if (s != 0)
 	  {
-		log_error ("error creating timeout thread");
+		log_error_en (s, "error creating timeout thread");
 		do_cleanup (tdata);
 	  }
 	return s;
@@ -192,9 +192,9 @@ create_picam_thread (struct thread_data *tdata)
 
 	s = pthread_create (&tdata->picam_t, &tdata->attr, &thread_picam_start,
 						tdata);
-	if (s < 0)
+	if (s != 0)
 	  {
-		log_error ("error creating picam thread");
+		log_error_en (s, "error creating picam thread");
 		do_cleanup (tdata);
 	  }
 	return s;	
@@ -243,7 +243,7 @@ main (void)
 	handle_signals ();
 
 	s = setup_wiringPi (&tdata);
-	if (s != 0)
+	if (s < 0)
 	  {
 	    return 1;
 	  }
@@ -259,7 +259,7 @@ main (void)
 
 	/* Create a pipe used to singal all threads to begin shutdown sequence */
 	s = pipe (tdata.timerpipe);
-	if (s != 0)
+	if (s < 0)
 	  {
 	    log_error ("error creating pipe");
 	    do_cleanup (&tdata);
@@ -339,8 +339,8 @@ main (void)
    	  }
 
    	s = pthread_mutex_destroy (&tdata.record_mutex);
-	if (s < 0)
-		log_error ("error in pthread_mutex_destroy");
+	if (s != 0)
+		log_error_en (s, "error in pthread_mutex_destroy");
 
    	s = close (tdata.record_eventfd);
    	if (s < 0)
@@ -355,8 +355,8 @@ main (void)
    		log_error ("error in close");
 
    	s = pthread_attr_destroy (&tdata.attr);
-	if (s < 0)
-		log_error ("error in pthread_attr_destroy");
+	if (s != 0)
+		log_error_en (s, "error in pthread_attr_destroy");
 
 	return 0;
 }

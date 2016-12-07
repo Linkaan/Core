@@ -42,6 +42,10 @@
 		fprintf(stderr, "%s: %s: %d: %s: %s\n", __progname,\
 				__FILE__, __LINE__, msg, strerror (errno))
 
+#define log_error_en(msg, en)\
+        errno = en;\
+        log_error (msg)
+
 /* String containing name the program is called with.
    To be initialized by main(). */
 extern const char *__progname;
