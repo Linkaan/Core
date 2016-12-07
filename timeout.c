@@ -58,7 +58,11 @@ thread_timeout_start(void *arg)
     /* Put the thread in deferred cancellation mode to avoid the scenario
        where the thread gets cancelled in the middle of the execution of 
        our cleanup handler */
-    pthread_setcanceltype (PTHREAD_CANCEL_DEFERRED, NULL);
+    s = pthread_setcanceltype (PTHREAD_CANCEL_DEFERRED, NULL);
+    if (s != 0)
+      {
+        log_error_en (s, "pthread_setcanceltype failed");
+      }
 
     memset (&itdata, 0, sizeof (itdata));
 	memset (&itdata.poll_fds, 0, sizeof (itdata.poll_fds));
@@ -83,8 +87,10 @@ thread_timeout_start(void *arg)
             if (itdata.poll_fds[0].revents & events)
               {
                 s = read (itdata.poll_fds[0].fd, &u, sizeof (uint64_t));
-                if (s != sizeof (uint64_t))
+                if (s < 0)
                     log_error ("read failed");
+                else
+                    printf ("[DEBUG] read %" PRIu64 ", expected %" PRIu64 "\n", s, sizeof (uint64_t));
               }
 
             pthread_cleanup_push (&cleanup_handler, &itdata);
@@ -100,7 +106,6 @@ thread_timeout_start(void *arg)
             else
                 printf ("[DEBUG] read %" PRIu64 ", expected %" PRIu64 "\n", s, sizeof (uint64_t));
 
-            pthread_mutex_unlock (&itdata.record_mutex);
             pthread_cleanup_pop (1);
 
             /* If there is data to read on timerpipe, we shall exit */

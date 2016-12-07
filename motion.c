@@ -93,7 +93,7 @@ reset_timer(int timerfd, const int secs, const int isecs)
 
   s = timerfd_settime (timerfd, 0, &timer_value, NULL);
   if (s < 0)
-    log_error("timerfd_settime failed");    
+    log_error ("timerfd_settime failed");    
 
   return s;
 }
