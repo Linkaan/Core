@@ -316,7 +316,7 @@ main (void)
 	    log_error ("error in write");
 	  }
 	else
-		printf ("[DEBUG] read %" PRIu64 ", expected %" PRIu64 "\n", s, sizeof (uint64_t));
+		printf ("[DEBUG] read %" PRIu64 ", expected %" PRIu64 "\n", u, sizeof (uint64_t));
 
 	/* Fetch current time and put it in ts struct, we use the |= operator
 	   so that if previous call to read failed we will cancel threads */

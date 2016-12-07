@@ -84,29 +84,23 @@ thread_timeout_start(void *arg)
 	  		log_error("poll failed");
 	  	else if (s > 0)
 	  	  {
-            if (itdata.poll_fds[0].revents & events)
+            if (atomic_load (&tdata->is_recording))
               {
-                s = read (itdata.poll_fds[0].fd, &u, sizeof (uint64_t));
+                pthread_cleanup_push (&cleanup_handler, &itdata);
+                pthread_mutex_lock (&itdata.record_mutex);
+
+                /* Instead of using a pthread condition variable we use a eventfd
+                   object to notify other threads because we can then poll on
+                   multiple file descriptors */
+                u = 0;
+                s = write (tdata->record_eventfd, &u, sizeof (uint64_t));
                 if (s < 0)
-                    log_error ("read failed");
+                    log_error ("write failed");
                 else
-                    printf ("[DEBUG] read %" PRIu64 ", expected %" PRIu64 "\n", s, sizeof (uint64_t));
+                    printf ("[DEBUG] read %" PRIu64 ", expected %" PRIu64 "\n", u, sizeof (uint64_t));
+
+                pthread_cleanup_pop (1);
               }
-
-            pthread_cleanup_push (&cleanup_handler, &itdata);
-            pthread_mutex_lock (&itdata.record_mutex);
-
-            /* Instead of using a pthread condition variable we use a eventfd
-               object to notify other threads because we can then poll on
-               multiple file descriptors */
-            u = 0;
-            s = write (tdata->record_eventfd, &u, sizeof (uint64_t));
-            if (s < 0)
-                log_error ("write failed");
-            else
-                printf ("[DEBUG] read %" PRIu64 ", expected %" PRIu64 "\n", s, sizeof (uint64_t));
-
-            pthread_cleanup_pop (1);
 
             /* If there is data to read on timerpipe, we shall exit */
             if (itdata.poll_fds[1].revents & events)
@@ -114,6 +108,15 @@ thread_timeout_start(void *arg)
                 printf ("[DEBUG] timeout thread notified to exit!\n");
                 break;
               }
+
+            if (itdata.poll_fds[0].revents & events)
+              {
+                s = read (itdata.poll_fds[0].fd, &u, sizeof (uint64_t));
+                if (s < 0)
+                    log_error ("read failed");
+                else
+                    printf ("[DEBUG] read %" PRIu64 ", expected %" PRIu64 "\n", u, sizeof (uint64_t));
+              }            
 	  	  }
 	  }
 

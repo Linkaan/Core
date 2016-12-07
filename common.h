@@ -26,6 +26,9 @@
 
 #include <pthread.h>
 #include <stdatomic.h>
+#include <stdio.h>
+#include <inttypes.h>
+#include <stdint.h>
 #include <errno.h>
 
 /* Define _GNU_SOURCE for pthread_timedjoin_np and asprintf */
@@ -42,7 +45,7 @@
 		fprintf(stderr, "%s: %s: %d: %s: %s\n", __progname,\
 				__FILE__, __LINE__, msg, strerror (errno))
 
-#define log_error_en(msg, en)\
+#define log_error_en(en, msg)\
         errno = en;\
         log_error (msg)
 

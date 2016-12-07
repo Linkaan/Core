@@ -68,7 +68,7 @@ on_motion_detect (void *arg)
 		  }
 		else
 		  {
-		  	if (atomic_compare_exchange_weak (&tdata->is_recording, (_Bool[]) { true }, true))
+		  	if (atomic_load (&tdata->is_recording))
       			reset_timer (tdata->timerfd, 5, 0);
 		  }
 	  }
