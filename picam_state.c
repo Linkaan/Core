@@ -122,6 +122,12 @@ thread_picam_start (void *arg)
               }
             else /* tdata->timerpipe[0] or tdata->record_eventfd */
               {
+              	if (itdata.poll_fds[1].revents & events)
+                  {
+                  	printf ("[DEBUG] picam thread notified to exit!\n");
+              		break;
+                  }
+
 	            if (itdata.poll_fds[2].revents & events)
 	              {
 	              	pthread_mutex_lock (&tdata->record_mutex);
@@ -131,20 +137,14 @@ thread_picam_start (void *arg)
 	                else
 	                	printf ("[DEBUG] read %" PRIu64 ", expected %" PRIu64 "\n", s, sizeof (uint64_t));
 	                pthread_mutex_unlock (&tdata->record_mutex);
-	              }
 
-                if (itdata.poll_fds[1].revents & events)
-                  {
-                  	printf ("[DEBUG] picam thread notified to exit!\n");
-              		break;
-                  }
-
-                handle_record_event (&itdata, u);
+	                handle_record_event (&itdata, u);
+	              }                
               }
           }
       }
 
-	/* Call our cleanup handler */
+	/* Call our cleanup handler */1
 	pthread_cleanup_pop (1);
 
 	return NULL;
