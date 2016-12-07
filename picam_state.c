@@ -126,8 +126,10 @@ thread_picam_start (void *arg)
 	              {
 	              	pthread_mutex_lock (&tdata->record_mutex);
 	                s = read (itdata.poll_fds[2].fd, &u, sizeof (uint64_t));
-	                if (s != sizeof (uint64_t))
+	                if (s < 0)
 	                    log_error ("read failed");
+	                else
+	                	printf ("[DEBUG] read %" PRIu64 ", expected %" PRIu64 "\n", s, sizeof (uint64_t));
 	                pthread_mutex_unlock (&tdata->record_mutex);
 	              }
 

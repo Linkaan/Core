@@ -95,8 +95,10 @@ thread_timeout_start(void *arg)
                multiple file descriptors */
             u = 0;
             s = write (tdata->record_eventfd, &u, sizeof (uint64_t));
-            if (s != sizeof (uint64_t))
+            if (s < 0)
                 log_error ("write failed");
+            else
+                printf ("[DEBUG] read %" PRIu64 ", expected %" PRIu64 "\n", s, sizeof (uint64_t));
 
             pthread_mutex_unlock (&itdata.record_mutex);
             pthread_cleanup_pop (1);

@@ -311,12 +311,12 @@ main (void)
 	/* Write 8 bytes to notify all threads to exit */
 	u = ~0ULL;
 	s = write (tdata.timerpipe[1], &u, sizeof (uint64_t));
-	if (s != sizeof (uint64_t))
+	if (s < 0)
 	  {
 	    log_error ("error in write");
-	    do_cleanup (&tdata);
-		return 1;
-	  }	
+	  }
+	else
+		printf ("[DEBUG] read %" PRIu64 ", expected %" PRIu64 "\n", s, sizeof (uint64_t));
 
 	/* Fetch current time and put it in ts struct */
 	s = clock_gettime (CLOCK_REALTIME, &ts);
