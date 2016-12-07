@@ -39,6 +39,9 @@
 #include "touch.h"
 #include "common.h"
 
+/* Read for inotify fd requires a buffer, we approximate the size */
+#define BUF_LEN (10 * (sizeof (struct inotify) + 32 + 1))
+
 /* Used internally by thread to store allocated resources  */
 struct internal_t_data {  	
 	_Bool 		watch_state_enabled;
@@ -106,6 +109,8 @@ thread_picam_start (void *arg)
 	itdata.poll_fds[itdata.poll_fds_len] = itdata.poll_fds[0];
 	itdata.poll_fds[itdata.poll_fds_len++].fd = tdata->record_eventfd;
 
+	printf ("[DEBUG] fd is %d\n", itdata.inotify_fd);
+
 	while (1)
 	  {
 	  	/* Passing -1 to poll as third argument means to block (INFTIM) */
@@ -153,60 +158,70 @@ thread_picam_start (void *arg)
 static void
 handle_state_file_created (struct internal_t_data *itdata)
 {
-	ssize_t s;
-
-	struct inotify_event event;
-	s = read (itdata->inotify_fd, &event, sizeof (struct inotify_event));
-    if (s != sizeof (struct inotify_event))
+	ssize_t s, nbytes;
+	char buf[BUF_LEN] __attribute__ ((aligned(8)));
+	
+	nbytes = read (itdata->inotify_fd, buf, BUF_LEN);
+    if (nbytes < 0)
         log_error ("read failed");
-    if (event.len)
+    else if (nbytes == 0)
       {
-      	if (event.mask & itdata->inotify_mask)
-      	  {
-      	  	/* Ignore all directories */
-      	  	if (!(event.mask & IN_ISDIR))
-      	  	  {
-      	  	  	/* We add 2 bytes for the delimiter and nul-terminator */
-      	  	  	int path_len = itdata->dir_strlen + strlen (event.name) + 2;
-      	  	  	itdata->path = malloc (path_len);
-      	  	  	if (itdata->path == NULL)
-      	  	  	  log_error ("malloc for file path failed");
-      	  	  	else
-      	  	  	  {
-      	  	  	  	s = snprintf (itdata->path, path_len, "%s/%s", itdata->dir, event.name);
-
-      	  	  	  	itdata->fp = fopen (itdata->path, "rb");
-      	  	  	  	if (itdata->fp)
-      	  	  	  	  {
-      	  	  	  	  	fseek (itdata->fp, 0, SEEK_END);
-      	  	  	  	  	long content_len = ftell (itdata->fp);
-      	  	  	  	  	fseek (itdata->fp, 0, SEEK_SET);
-
-      	  	  	  	  	itdata->content = malloc (content_len + 1);                  	  	  	  	  	
-      	  	  	  	  	if (itdata->content)
-      	  	  	  	  	  {
-      	  	  	  	  	  	fread (itdata->content, 1, content_len, itdata->fp);      	  	  	  	  	  	
-      	  	  	  	  	  	itdata->content[content_len] = '\0';
-      	  	  	  	  	  }
-      	  	  	  	  	else
-      	  	  	  	  		log_error ("malloc for file content failed");
-      	  	  	  	  	fclose (itdata->fp);
-      	  	  	  	  	itdata->fp = NULL;
-      	  	  	  	  }
-      	  	  	  	else
-      	  	  	  		log_error ("fopen failed");
-      	  	  	  	handle_state_file (itdata, event.name, itdata->content);
-      	  	  	  	free (itdata->content);
-      	  	  	  	itdata->content = NULL;
-      	  	  	  }
-      	  	  	s = unlink (itdata->path);
-      	  	  	if (s < 0)
-      	  	  		log_error ("unlink failed");
-      	  	  	free (itdata->path);
-      	  	  	itdata->path = NULL;
-      	  	  }
-      	  }
+      	log_error ("read from inotify fd returned 0");
+    	return;
       }
+    for (char *p = buf; p < buf + nbytes;)
+      {
+      	struct inotify_event *event = (struct inotify_event *) p;
+	    if (event->len)
+	      {
+	      	if (event->mask & itdata->inotify_mask)
+	      	  {
+	      	  	/* Ignore all directories */
+	      	  	if (!(event->mask & IN_ISDIR))
+	      	  	  {
+	      	  	  	/* We add 2 bytes for the delimiter and nul-terminator */
+	      	  	  	int path_len = itdata->dir_strlen + strlen (event->name) + 2;
+	      	  	  	itdata->path = malloc (path_len);
+	      	  	  	if (itdata->path == NULL)
+	      	  	  	  log_error ("malloc for file path failed");
+	      	  	  	else
+	      	  	  	  {
+	      	  	  	  	s = snprintf (itdata->path, path_len, "%s/%s", itdata->dir, event->name);
+
+	      	  	  	  	itdata->fp = fopen (itdata->path, "rb");
+	      	  	  	  	if (itdata->fp)
+	      	  	  	  	  {
+	      	  	  	  	  	fseek (itdata->fp, 0, SEEK_END);
+	      	  	  	  	  	long content_len = ftell (itdata->fp);
+	      	  	  	  	  	fseek (itdata->fp, 0, SEEK_SET);
+
+	      	  	  	  	  	itdata->content = malloc (content_len + 1);                  	  	  	  	  	
+	      	  	  	  	  	if (itdata->content)
+	      	  	  	  	  	  {
+	      	  	  	  	  	  	fread (itdata->content, 1, content_len, itdata->fp);      	  	  	  	  	  	
+	      	  	  	  	  	  	itdata->content[content_len] = '\0';
+	      	  	  	  	  	  }
+	      	  	  	  	  	else
+	      	  	  	  	  		log_error ("malloc for file content failed");
+	      	  	  	  	  	fclose (itdata->fp);
+	      	  	  	  	  	itdata->fp = NULL;
+	      	  	  	  	  }
+	      	  	  	  	else
+	      	  	  	  		log_error ("fopen failed");
+	      	  	  	  	handle_state_file (itdata, event->name, itdata->content);
+	      	  	  	  	free (itdata->content);
+	      	  	  	  	itdata->content = NULL;
+	      	  	  	  }
+	      	  	  	s = unlink (itdata->path);
+	      	  	  	if (s < 0)
+	      	  	  		log_error ("unlink failed");
+	      	  	  	free (itdata->path);
+	      	  	  	itdata->path = NULL;
+	      	  	  }
+	      	  }
+	      }
+	    p += sizeof (struct inotify_event) + event->len;
+	  }
 }
 
 /* Helper function for when a new state file is created */
@@ -282,7 +297,7 @@ setup_inotify (struct internal_t_data *itdata)
 	  	log_error ("inotify_init failed");
 		return 1;
 	  }
-	itdata->inotify_fd = s;
+	itdata->inotify_fd = (int) s;
 
 	s = stat (itdata->dir, &itdata->st);
 	if (s < 0)
