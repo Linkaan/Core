@@ -124,9 +124,11 @@ thread_picam_start (void *arg)
               {
 	            if (itdata.poll_fds[2].revents & events)
 	              {
+	              	pthread_mutex_lock (&tdata->record_mutex);
 	                s = read (itdata.poll_fds[2].fd, &u, sizeof (uint64_t));
 	                if (s != sizeof (uint64_t))
 	                    log_error ("read failed");
+	                pthread_mutex_unlock (&tdata->record_mutex);
 	              }
 
                 if (itdata.poll_fds[1].revents & events)
