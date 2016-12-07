@@ -50,7 +50,7 @@
    for the issue of using this macro on a single line if statement without
    a body */
 #define log_error_en(en, msg)\
-        do { errno = en;log_error (msg) } while(0)
+        do { errno = en;log_error (msg); } while(0)
 
 /* String containing name the program is called with.
    To be initialized by main(). */
