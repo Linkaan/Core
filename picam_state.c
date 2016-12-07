@@ -40,7 +40,7 @@
 #include "common.h"
 
 /* Read for inotify fd requires a buffer, we approximate the size */
-#define BUF_LEN (10 * (sizeof (struct inotify) + 32 + 1))
+#define BUF_LEN (10 * (sizeof (struct inotify_event) + 32 + 1))
 
 /* Used internally by thread to store allocated resources  */
 struct internal_t_data {  	
