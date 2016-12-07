@@ -41,16 +41,12 @@ static int reset_timer (int, const int, const int);
 void
 on_motion_detect (void *arg)
 {
-	int s;
+	ssize_t s;
 	uint64_t u;
 	struct thread_data *tdata = arg;
 
 	/* ----------- TEMP ----------- */
-	printf ("[DEBUG]\n");
-	unsigned char *p = (unsigned char *) arg;
-    for (int i = 0; i < sizeof (*arg); i++)
-        printf ("%02x\n", p[i]);
-    printf("\n");
+    printf("pir %d, fd %d\n", tdata->pir_pin, tdata->record_eventfd);
 
 	if (digitalRead (tdata->pir_pin) == HIGH)
 	  {
@@ -58,7 +54,7 @@ on_motion_detect (void *arg)
 		if (atomic_compare_exchange_weak (&tdata->is_recording, (_Bool[]) { false }, true))
 		  {
             pthread_mutex_lock (&tdata->record_mutex);            
-            u = PICAM_START_RECORD;
+            u = ~0ULL;
             s = write (tdata->record_eventfd, &u, sizeof (uint64_t));
             if (s != sizeof (uint64_t))
               {
@@ -79,7 +75,7 @@ on_motion_detect (void *arg)
 static int
 reset_timer(int timerfd, const int secs, const int isecs)
 {
-  int s;
+  ssize_t s;
   struct itimerspec timer_value;
 
   /*

@@ -73,7 +73,7 @@ static int setup_inotify (struct internal_t_data *);
 void *
 thread_picam_start (void *arg)
 {
-	int s, events;
+	ssize_t s, events;
 	uint64_t u;
 	struct thread_data *tdata = arg;
 	struct internal_t_data itdata;
@@ -150,7 +150,7 @@ thread_picam_start (void *arg)
 static void
 handle_state_file_created (struct internal_t_data *itdata)
 {
-	int s;
+	ssize_t s;
 
 	struct inotify_event event;
 	s = read (itdata->inotify_fd, &event, sizeof (struct inotify_event));
@@ -210,7 +210,7 @@ handle_state_file_created (struct internal_t_data *itdata)
 static void
 handle_state_file (struct internal_t_data *itdata, const char *filename, const char *content)
 {
-	int s;
+	ssize_t s;
 
 	if (strcmp(filename, "record") == 0)
 	  {
@@ -245,7 +245,7 @@ handle_state_file (struct internal_t_data *itdata, const char *filename, const c
 static void
 handle_record_event (struct internal_t_data *itdata, const uint64_t u)
 {
-	int s;
+	ssize_t s;
 
 	switch (u)
       {
@@ -271,7 +271,7 @@ handle_record_event (struct internal_t_data *itdata, const uint64_t u)
 static int
 setup_inotify (struct internal_t_data *itdata)
 {
-	int s;	
+	ssize_t s;	
 
 	s = inotify_init ();
 	if (s < 0)

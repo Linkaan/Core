@@ -104,7 +104,7 @@ handle_signals ()
 static void
 join_or_cancel_thread (pthread_t t, struct timespec *ts)
 {
-	int s;
+	ssize_t s;
 
 	s = pthread_timedjoin_np (t, NULL, ts);
 	if (s != 0)
@@ -120,7 +120,7 @@ join_or_cancel_thread (pthread_t t, struct timespec *ts)
 static int
 setup_thread_attr (struct thread_data *tdata)
 {
-	int s;
+	ssize_t s;
 
 	s = pthread_mutex_init (&tdata->record_mutex, NULL);
 	if (s < 0)
@@ -164,7 +164,7 @@ setup_thread_attr (struct thread_data *tdata)
 static int
 create_timer_thread (struct thread_data *tdata)
 {
-	int s;
+	ssize_t s;
 
 	tdata->is_recording = ATOMIC_VAR_INIT(false);
 	s = pthread_create (&tdata->timer_t, &tdata->attr, &thread_timeout_start,
@@ -180,7 +180,7 @@ create_timer_thread (struct thread_data *tdata)
 static int
 create_picam_thread (struct thread_data *tdata)
 {
-	int s;
+	ssize_t s;
 
 	s = pthread_create (&tdata->picam_t, &tdata->attr, &thread_picam_start,
 						tdata);
@@ -196,7 +196,7 @@ create_picam_thread (struct thread_data *tdata)
 static int
 setup_wiringPi (struct thread_data *tdata)
 {
-	int s;
+	ssize_t s;
 
 	/* Initialize wiringPi with default pin numbering scheme */
 	s = wiringPiSetup ();
@@ -222,7 +222,7 @@ setup_wiringPi (struct thread_data *tdata)
 int
 main (void)
 {
-	int s;
+	ssize_t s;
 	uint64_t u;
 	struct timespec ts;
 	struct thread_data tdata;

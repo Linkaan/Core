@@ -48,7 +48,7 @@ struct internal_t_data {
 void *
 thread_timeout_start(void *arg)
 {
-	int s, events;
+	ssize_t s, events;
     uint64_t u;
 	struct thread_data *tdata = arg;
 	struct internal_t_data itdata;
