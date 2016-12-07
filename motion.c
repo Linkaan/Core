@@ -53,8 +53,9 @@ on_motion_detect (void *arg)
 		reset_timer (tdata->timerfd, 5, 0);
 		if (atomic_compare_exchange_weak (&tdata->is_recording, (_Bool[]) { false }, true))
 		  {
-            pthread_mutex_lock (&tdata->record_mutex);            
-            u = ~0ULL;
+		  	/* Send start recording event */
+            pthread_mutex_lock (&tdata->record_mutex);        
+            u = 1;
             s = write (tdata->record_eventfd, &u, sizeof (uint64_t));
             if (s != sizeof (uint64_t))
               {

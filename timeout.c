@@ -93,7 +93,7 @@ thread_timeout_start(void *arg)
             /* Instead of using a pthread condition variable we use a eventfd
                object to notify other threads because we can then poll on
                multiple file descriptors */
-            u = PICAM_STOP_RECORD;
+            u = 0;
             s = write (tdata->record_eventfd, &u, sizeof (uint64_t));
             if (s != sizeof (uint64_t))
                 log_error ("write failed");

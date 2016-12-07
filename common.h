@@ -38,10 +38,6 @@
 #define PICAM_STOP_HOOK "/home/tc/state/stop_record"
 #define PICAM_START_HOOK "/home/tc/state/start_record"
 
-/* Used in record event to start or stop recording */
-#define PICAM_START_RECORD ~0ULL
-#define PICAM_STOP_RECORD 0
-
 #define log_error(msg)\
 		fprintf(stderr, "%s: %s: %d: %s: %s\n", __progname,\
 				__FILE__, __LINE__, msg, strerror (errno))

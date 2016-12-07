@@ -249,12 +249,12 @@ handle_record_event (struct internal_t_data *itdata, const uint64_t u)
 {
 	ssize_t s;
 
-	switch (u)
+	switch (u % 2)
       {
-      	case PICAM_START_RECORD:
+      	case 1: // start recording if u is not divisible by 2
       		s = touch (itdata->picam_start_hook);
       		break;
-      	case PICAM_STOP_RECORD:
+      	case 0: // stop recording otherwise
       		s = touch (itdata->picam_stop_hook);
       		if (s == 0 && !itdata->watch_state_enabled)
       			atomic_store (itdata->is_recording, false);
