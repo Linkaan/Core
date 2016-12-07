@@ -45,9 +45,6 @@ on_motion_detect (void *arg)
 	uint64_t u;
 	struct thread_data *tdata = arg;
 
-	/* ----------- TEMP ----------- */
-    printf("pir %d, fd %d\n", tdata->pir_pin, tdata->record_eventfd);
-
 	if (digitalRead (tdata->pir_pin) == HIGH || atomic_compare_exchange_weak (&tdata->fake_isr, (_Bool[]) { true }, false))
 	  {
 		reset_timer (tdata->timerfd, 5, 0);

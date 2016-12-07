@@ -289,7 +289,6 @@ main (void)
 	  	sem_wait (&keep_going);
 	  	if (raise_fake_isr)
 	  	  {
-	  	  	printf ("raise fake isr\n");
 	  	  	atomic_store (&tdata.fake_isr, true);
 	  	  	on_motion_detect ((void *) &tdata);
 	  	  	raise_fake_isr = 0;	  	  	

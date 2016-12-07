@@ -109,8 +109,6 @@ thread_picam_start (void *arg)
 	itdata.poll_fds[itdata.poll_fds_len] = itdata.poll_fds[0];
 	itdata.poll_fds[itdata.poll_fds_len++].fd = tdata->record_eventfd;
 
-	printf ("[DEBUG] fd is %d\n", itdata.inotify_fd);
-
 	while (1)
 	  {
 	  	/* Passing -1 to poll as third argument means to block (INFTIM) */
