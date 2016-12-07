@@ -318,12 +318,16 @@ main (void)
 	else
 		printf ("[DEBUG] read %" PRIu64 ", expected %" PRIu64 "\n", s, sizeof (uint64_t));
 
-	/* Fetch current time and put it in ts struct */
-	s = clock_gettime (CLOCK_REALTIME, &ts);
+	/* Fetch current time and put it in ts struct, we use the |= operator
+	   so that if previous call to read failed we will cancel threads */
+	s |= clock_gettime (CLOCK_REALTIME, &ts);
     if (s < 0)
       {
 		log_error ("error in clock_gettime");
 	    s = pthread_cancel (tdata.timer_t);
+	    if (s != 0)
+	    	log_error ("error in pthread_cancel");
+	   	s = pthread_cancel (tdata.picam_t);
 	    if (s != 0)
 	    	log_error ("error in pthread_cancel");
       }  		
