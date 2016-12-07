@@ -114,7 +114,7 @@ thread_picam_start (void *arg)
 	  	/* Passing -1 to poll as third argument means to block (INFTIM) */
 	  	s = poll (itdata.poll_fds, 3, -1);
 
-	  	printf ("[DEBUG] picam thread poll returned %d (timerpipe revents %d, events %d)\n", s, itdata.poll_fds[1].revents & events, events);
+	  	printf ("[DEBUG] picam thread poll returned %d (record_eventfd revents %d, timerpipe revents %d)\n", s, itdata.poll_fds[2].revents & events, itdata.poll_fds[1].revents & events);
 	  	if (s < 0)
 	  		log_error ("poll failed");
 	  	else if (s > 0)
@@ -139,6 +139,8 @@ thread_picam_start (void *arg)
 	                else if (s != sizeof (uint64_t))
 	                	printf ("[DEBUG] read %d bytes, expected %d bytes\n", s, sizeof (uint64_t));
 	                pthread_mutex_unlock (&tdata->record_mutex);
+
+	                printf ("[DEBUG] got %" PRIu64 " from eventfd\n", u);
 
 	                handle_record_event (&itdata, u);
 	              }                
@@ -261,14 +263,16 @@ handle_state_file (struct internal_t_data *itdata, const char *filename, const c
 static void
 handle_record_event (struct internal_t_data *itdata, const uint64_t u)
 {
-	ssize_t s;
+	ssize_t s;	
 
 	switch (u % 2)
       {
       	case 1: // start recording if u is not divisible by 2
+      		printf ("[DEBUG] starting picam recording!\n");
       		s = touch (itdata->picam_start_hook);
       		break;
       	case 0: // stop recording otherwise
+      		printf ("[DEBUG] stopping picam recording!\n");
       		s = touch (itdata->picam_stop_hook);
       		if (s == 0 && !itdata->watch_state_enabled)
       			atomic_store (itdata->is_recording, false);

@@ -35,7 +35,7 @@ all: $(SOURCES) $(EXECUTABLE)
 $(EXECUTABLE): $(OBJECTS)
 	$(CC) $(OBJECTS) -o $@ $(LDFLAGS)
 
-%.0: %.c $(HEADERS)
+%.o: %.c $(HEADERS)
 	ifndef CC
 	$(error CC not set, please invoke with CC set to path of arm-rpi-linux-gnueabihf-gcc)
 	endif
