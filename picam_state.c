@@ -236,6 +236,7 @@ handle_state_file (struct internal_t_data *itdata, const char *filename, const c
 	  	  {
 	  	  	if (strcmp(content, "false") == 0)
 	  	  	  {
+	  	  	  	printf ("[DEBUG] should stop recording\n");
 				if (atomic_compare_exchange_weak (itdata->is_recording, (_Bool[]) { true }, false))
 				  {
 			        s = clock_gettime (CLOCK_REALTIME, &itdata->end);
@@ -250,7 +251,7 @@ handle_state_file (struct internal_t_data *itdata, const char *filename, const c
 	  	  	  }
 	  	  	else if (strcmp (content, "true") == 0)
 	  	  	  {
-	  	  	  	printf ("started recording\n");
+	  	  	  	printf ("started recording (is recording: %s)\n", atomic_load(&itdata->is_recording) ? "true" : "false");
 	  	  	  	s = clock_gettime (CLOCK_REALTIME, &itdata->start);
 	  	  	  }
 	  	  	else

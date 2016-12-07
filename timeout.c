@@ -101,6 +101,8 @@ thread_timeout_start(void *arg)
 
                 pthread_cleanup_pop (1);
               }
+            else
+                printf("[DEBUG] oops, not recording!");
 
             /* If there is data to read on timerpipe, we shall exit */
             if (itdata.poll_fds[1].revents & events)

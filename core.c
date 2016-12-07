@@ -236,7 +236,7 @@ main (void)
 	struct thread_data tdata;
 
 	/* Initialize keep_going as binary semaphore initially 0 */
-	sem_init (&keep_going, 0, 0);
+	sem_init (&keep_going, 0, EFD_CLOEXEC | EFD_NONBLOCK);
 
 	memset (&tdata, 0, sizeof (tdata));
 
