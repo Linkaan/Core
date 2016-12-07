@@ -60,15 +60,20 @@ static void join_or_cancel_thread (pthread_t, struct timespec *);
 /* Non-zero means we should exit the program as soon as possible */
 static sem_t keep_going;
 
-/* Signal handler for SIGINT, SIGHUP and SIGTERM */
+/* Used for faking interrupts */
+static volatile int raise_fake_isr = 0;
+
+/* Signal handler for SIGTSTP, SIGINT, SIGHUP and SIGTERM */
 void
-handle_sigint (int signum)
+handle_sig (int signum)
 {
 	struct sigaction new_action;
 
+	if (signum == SIGTSTP)
+		raise_fake_isr = 1;
 	sem_post (&keep_going);
 
-	new_action.sa_handler = handle_sigint;
+	new_action.sa_handler = handle_sig;
 	sigemptyset (&new_action.sa_mask);
 	new_action.sa_flags = 0;
 
@@ -82,7 +87,7 @@ handle_signals ()
 	struct sigaction new_action, old_action;
 
 	/* Set up the structure to specify the new action. */
-	new_action.sa_handler = handle_sigint;
+	new_action.sa_handler = handle_sig;
 	sigemptyset (&new_action.sa_mask);
 	new_action.sa_flags = 0;
 	
@@ -97,6 +102,9 @@ handle_signals ()
 	sigaction (SIGTERM, NULL, &old_action);
 	if (old_action.sa_handler != SIG_IGN)
 		sigaction (SIGTERM, &new_action, NULL);
+	sigaction (SIGTSTP, NULL, &old_action);
+	if (old_action.sa_handler != SIG_IGN)
+		sigaction (SIGTSTP, &new_action, NULL);	
 }
 
 /* Helper function to attempt joining a thread, if a timeout runs out it shall
@@ -276,7 +284,19 @@ main (void)
 	    return 1;
 	  }
 
-	sem_wait (&keep_going);
+	while (1)
+	  {
+	  	sem_wait (&keep_going);
+	  	if (raise_fake_isr)
+	  	  {
+	  	  	printf ("raise fake isr\n");
+	  	  	atomic_store (&tdata.fake_isr, true);
+	  	  	on_motion_detect ((void *) &tdata);
+	  	  	raise_fake_isr = 0;	  	  	
+	  	  	continue;  	  	
+	  	  }
+	  	break;
+	  }	
 
 	/* **************************************************************** */
 	/*								    								*/

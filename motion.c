@@ -48,7 +48,7 @@ on_motion_detect (void *arg)
 	/* ----------- TEMP ----------- */
     printf("pir %d, fd %d\n", tdata->pir_pin, tdata->record_eventfd);
 
-	if (digitalRead (tdata->pir_pin) == HIGH)
+	if (digitalRead (tdata->pir_pin) == HIGH || atomic_compare_exchange_weak (&tdata->fake_isr, (_Bool[]) { true }, false))
 	  {
 		reset_timer (tdata->timerfd, 5, 0);
 		if (atomic_compare_exchange_weak (&tdata->is_recording, (_Bool[]) { false }, true))
