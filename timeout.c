@@ -92,7 +92,7 @@ thread_timeout_start(void *arg)
                 /* Instead of using a pthread condition variable we use a eventfd
                    object to notify other threads because we can then poll on
                    multiple file descriptors */
-                u = 0;
+                u = 2;
                 s = write (tdata->record_eventfd, &u, sizeof (uint64_t));
                 if (s < 0)
                     log_error ("write failed");
@@ -101,8 +101,6 @@ thread_timeout_start(void *arg)
 
                 pthread_cleanup_pop (1);
               }
-            else
-                printf("[DEBUG] oops, not recording!\n");
 
             /* If there is data to read on timerpipe, we shall exit */
             if (itdata.poll_fds[1].revents & events)

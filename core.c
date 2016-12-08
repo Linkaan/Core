@@ -75,7 +75,7 @@ handle_sig (int signum)
 
 	new_action.sa_handler = handle_sig;
 	sigemptyset (&new_action.sa_mask);
-	new_action.sa_flags = 0;
+	new_action.sa_flags = SA_RESTART;
 
 	sigaction (signum, &new_action, NULL);
 }
@@ -302,10 +302,8 @@ main (void)
 	/*						Begin shutdown sequence		    			*/
 	/*								    								*/
 	/* **************************************************************** */
-
-	sem_destroy (&keep_going);
-
 	printf ("[DEBUG] main thread woke up, try to wake up other threads.\n");
+	sem_destroy (&keep_going);	
 
 	/* Write 8 bytes to notify all threads to exit */
 	u = ~0ULL;

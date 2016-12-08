@@ -94,8 +94,7 @@ thread_picam_start (void *arg)
 
 	itdata.is_recording = &tdata->is_recording;
 	s = setup_inotify (&itdata);
-	if (s < 0)
-		itdata.watch_state_enabled = false;
+	itdata.watch_state_enabled = (_Bool) s >= 0;
 
 	memset (&itdata.poll_fds, 0, sizeof (itdata.poll_fds));
 
@@ -230,13 +229,13 @@ handle_state_file (struct internal_t_data *itdata, const char *filename, const c
 {
 	ssize_t s;
 
-	if (strcmp(filename, "record") == 0)
+	if (strcmp (filename, "record") == 0)
 	  {
 	  	if (content != NULL)
 	  	  {
-	  	  	if (strcmp(content, "false") == 0)
+	  	  	if (strcmp (content, "false") == 0)
 	  	  	  {
-	  	  	  	printf ("[DEBUG] should stop recording\n");
+	  	  	  	printf ("[DEBUG] should stop recording (is recording: %s)\n", atomic_load (itdata->is_recording) ? "true" : "false");
 				if (atomic_compare_exchange_weak (itdata->is_recording, (_Bool[]) { true }, false))
 				  {
 			        s = clock_gettime (CLOCK_REALTIME, &itdata->end);
@@ -251,7 +250,7 @@ handle_state_file (struct internal_t_data *itdata, const char *filename, const c
 	  	  	  }
 	  	  	else if (strcmp (content, "true") == 0)
 	  	  	  {
-	  	  	  	printf ("started recording (is recording: %s)\n", atomic_load(&itdata->is_recording) ? "true" : "false");
+	  	  	  	printf ("started recording (is recording: %s)\n", atomic_load (itdata->is_recording) ? "true" : "false");
 	  	  	  	s = clock_gettime (CLOCK_REALTIME, &itdata->start);
 	  	  	  }
 	  	  	else
@@ -276,7 +275,10 @@ handle_record_event (struct internal_t_data *itdata, const uint64_t u)
       		printf ("[DEBUG] stopping picam recording!\n");
       		s = touch (itdata->picam_stop_hook);
       		if (s == 0 && !itdata->watch_state_enabled)
+      		  {
+      		  	printf("[DEBUG] setting is_recording to false\n");
       			atomic_store (itdata->is_recording, false);
+      		  }
       		break;
       	default:
       		errno = EINVAL;
