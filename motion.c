@@ -72,9 +72,10 @@ on_motion_detect (void *arg)
 int
 check_sensor_active (struct thread_data *tdata)
 {
-    int b = digitalRead (tdata->pir_pin) == HIGH && atomic_load (&tdata->is_recording);
+    int b;
 
-    if (b)
+    b = digitalRead (tdata->pir_pin) == HIGH;
+    if (b != 0)
         reset_timer (tdata, 5, 0);
 
     return b;

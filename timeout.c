@@ -85,7 +85,7 @@ thread_timeout_start(void *arg)
             log_error("poll failed");
         else if (s > 0)
           {
-            if (check_sensor_active (tdata))
+            if (!check_sensor_active (tdata) && atomic_load (&tdata->is_recording))
               {
                 pthread_cleanup_push (&cleanup_handler, &itdata);
                 pthread_mutex_lock (&itdata.record_mutex);
