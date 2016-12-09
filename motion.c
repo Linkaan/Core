@@ -1,6 +1,6 @@
 /*
- *	motion.c
- *	  Interrupt handler for PIR sensor
+ *  motion.c
+ *    Interrupt handler for PIR sensor
  *****************************************************************************
  *  This file is part of Fågelmataren, an embedded project created to learn
  *  Linux and C. See <https://github.com/Linkaan/Fagelmatare>
@@ -41,16 +41,16 @@ static int reset_timer (int, const int, const int);
 void
 on_motion_detect (void *arg)
 {
-	ssize_t s;
-	uint64_t u;
-	struct thread_data *tdata = arg;
+    ssize_t s;
+    uint64_t u;
+    struct thread_data *tdata = arg;
 
-	if (digitalRead (tdata->pir_pin) == HIGH || atomic_compare_exchange_weak (&tdata->fake_isr, (_Bool[]) { true }, false))
-	  {
-		reset_timer (tdata, 5, 0);
-		if (atomic_compare_exchange_weak (&tdata->is_recording, (_Bool[]) { false }, true))
-		  {
-		  	/* Send start recording event */
+    if (digitalRead (tdata->pir_pin) == HIGH || atomic_compare_exchange_weak (&tdata->fake_isr, (_Bool[]) { true }, false))
+      {
+        reset_timer (tdata, 5, 0);
+        if (atomic_compare_exchange_weak (&tdata->is_recording, (_Bool[]) { false }, true))
+          {
+            /* Send start recording event */
             pthread_mutex_lock (&tdata->record_mutex);        
             u = 1;
             s = write (tdata->record_eventfd, &u, sizeof (uint64_t));
@@ -62,22 +62,22 @@ on_motion_detect (void *arg)
             else if (s != sizeof (uint64_t))
                 printf ("[DEBUG] wrote %d bytes, expected %d bytes\n", s, sizeof (uint64_t));
             pthread_mutex_unlock (&tdata->record_mutex);
-		  }
-	  }
-	else if (atomic_load (&tdata->is_recording))
-  		reset_timer (tdata, 5, 0);
+          }
+      }
+    else if (atomic_load (&tdata->is_recording))
+        reset_timer (tdata, 5, 0);
 }
 
 /* Function to reset timer if PIR sensor is still HIGH */
 int
 check_sensor_active (struct thread_data *tdata)
 {
-	int b = digitalRead (tdata->pir_pin) == HIGH && atomic_load (&tdata->is_recording);
+    int b = digitalRead (tdata->pir_pin) == HIGH && atomic_load (&tdata->is_recording);
 
-	if (b)
-		reset_timer (tdata, 5, 0);
+    if (b)
+        reset_timer (tdata, 5, 0);
 
-	return b;
+    return b;
 }
 
 /* Helper function to set timerfd to a specified timer value */

@@ -1,6 +1,6 @@
 /*
- *	picam.h
- *	  The names of functions callable from within picam_state
+ *  picam.h
+ *    The names of functions callable from within picam_state
  *****************************************************************************
  *  This file is part of Fågelmataren, an embedded project created to learn
  *  Linux and C. See <https://github.com/Linkaan/Fagelmatare>

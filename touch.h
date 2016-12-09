@@ -1,6 +1,6 @@
 /*
- *	touch.h
- *	  The names of functions callable from within timeout
+ *  touch.h
+ *    The names of functions callable from within timeout
  *****************************************************************************
  *  This file is part of Fågelmataren, an embedded project created to learn
  *  Linux and C. See <https://github.com/Linkaan/Fagelmatare>

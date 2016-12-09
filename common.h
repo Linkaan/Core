@@ -1,6 +1,6 @@
 /*
- *	timeout.h
- *	  Common macros and defs used in multiple source files
+ *  timeout.h
+ *    Common macros and defs used in multiple source files
  *****************************************************************************
  *  This file is part of Fågelmataren, an embedded project created to learn
  *  Linux and C. See <https://github.com/Linkaan/Fagelmatare>
@@ -43,8 +43,8 @@
 
 /* Simple macro used to print error messages with location */
 #define log_error(msg)\
-		fprintf(stderr, "%s: %s: %d: %s: %s\n", __progname,\
-				__FILE__, __LINE__, msg, strerror (errno))
+        fprintf(stderr, "%s: %s: %d: %s: %s\n", __progname,\
+                __FILE__, __LINE__, msg, strerror (errno))
 
 /* Extension of above macro, the do { ... } while(0) part is a workaround
    for the issue of using this macro on a single line if statement without
@@ -58,16 +58,16 @@ extern const char *__progname;
 
 /* Common data structure used by threads */
 struct thread_data {
-  	int 			pir_pin;    
-  	int 			timerfd;
-  	int 			timerpipe[2];
-  	int 			record_eventfd;
+    int             pir_pin;    
+    int             timerfd;
+    int             timerpipe[2];
+    int             record_eventfd;
     atomic_bool     fake_isr;
-  	atomic_bool		is_recording;
-  	pthread_t 		timer_t;
-  	pthread_t 		picam_t;
-	pthread_attr_t	attr;
-	pthread_mutex_t record_mutex;
+    atomic_bool     is_recording;
+    pthread_t       timer_t;
+    pthread_t       picam_t;
+    pthread_attr_t  attr;
+    pthread_mutex_t record_mutex;
     pthread_mutex_t timer_mutex;
 };
 

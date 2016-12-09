@@ -1,6 +1,6 @@
 /*
- *	timeout.c
- *	  Asynchronous function to handle timeout event set by motion handler
+ *  timeout.c
+ *    Asynchronous function to handle timeout event set by motion handler
  *****************************************************************************
  *  This file is part of Fågelmataren, an embedded project created to learn
  *  Linux and C. See <https://github.com/Linkaan/Fagelmatare>
@@ -49,12 +49,12 @@ struct internal_t_data {
 void *
 thread_timeout_start(void *arg)
 {
-	ssize_t s, events;
+    ssize_t s, events;
     uint64_t u;
-	struct thread_data *tdata = arg;
-	struct internal_t_data itdata;
+    struct thread_data *tdata = arg;
+    struct internal_t_data itdata;
 
-	itdata.record_mutex = tdata->record_mutex;
+    itdata.record_mutex = tdata->record_mutex;
 
     /* Put the thread in deferred cancellation mode to avoid the scenario
        where the thread gets cancelled in the middle of the execution of 
@@ -66,25 +66,25 @@ thread_timeout_start(void *arg)
       }
 
     memset (&itdata, 0, sizeof (itdata));
-	memset (&itdata.poll_fds, 0, sizeof (itdata.poll_fds));
+    memset (&itdata.poll_fds, 0, sizeof (itdata.poll_fds));
 
-	itdata.poll_fds[itdata.poll_fds_len].fd = tdata->timerfd;
-	itdata.poll_fds[itdata.poll_fds_len].revents = 0;
-	itdata.poll_fds[itdata.poll_fds_len++].events = events = POLLIN | POLLPRI;
+    itdata.poll_fds[itdata.poll_fds_len].fd = tdata->timerfd;
+    itdata.poll_fds[itdata.poll_fds_len].revents = 0;
+    itdata.poll_fds[itdata.poll_fds_len++].events = events = POLLIN | POLLPRI;
 
-	itdata.poll_fds[itdata.poll_fds_len] = itdata.poll_fds[0];
-	itdata.poll_fds[itdata.poll_fds_len++].fd = tdata->timerpipe[0];
+    itdata.poll_fds[itdata.poll_fds_len] = itdata.poll_fds[0];
+    itdata.poll_fds[itdata.poll_fds_len++].fd = tdata->timerpipe[0];
 
-	while (1)
-	  {
-	  	/* Passing -1 to poll as third argument means to block (INFTIM) */
-	  	s = poll (itdata.poll_fds, 2, -1);
+    while (1)
+      {
+        /* Passing -1 to poll as third argument means to block (INFTIM) */
+        s = poll (itdata.poll_fds, 2, -1);
 
         printf ("[DEBUG] timeout thread poll returned %d (timerpipe revents %d, events %d)\n", s, itdata.poll_fds[1].revents & events, events);
-	  	if (s < 0)
-	  		log_error("poll failed");
-	  	else if (s > 0)
-	  	  {
+        if (s < 0)
+            log_error("poll failed");
+        else if (s > 0)
+          {
             if (check_sensor_active (tdata))
               {
                 pthread_cleanup_push (&cleanup_handler, &itdata);
@@ -118,10 +118,10 @@ thread_timeout_start(void *arg)
                 else if (s != sizeof (uint64_t))
                     printf ("[DEBUG] read %d bytes, expected %d bytes\n", s, sizeof (uint64_t));
               }            
-	  	  }
-	  }
+          }
+      }
 
-	return NULL;
+    return NULL;
 }
 
 /* This function is used to cleanup thread */

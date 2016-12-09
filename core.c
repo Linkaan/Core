@@ -1,8 +1,8 @@
 /*
  *  fagelmatare-core
  *    Communicates with picam when a motion event is risen and logs statistics
- *	core.c
- *	  Initialize wiring pi and create threads for each asynchrounous function 
+ *  core.c
+ *    Initialize wiring pi and create threads for each asynchrounous function 
  *****************************************************************************
  *  This file is part of Fågelmataren, an embedded project created to learn
  *  Linux and C. See <https://github.com/Linkaan/Fagelmatare>
@@ -67,47 +67,47 @@ static volatile int raise_fake_isr = 0;
 void
 handle_sig (int signum)
 {
-	struct sigaction new_action;
+    struct sigaction new_action;
 
-	if (signum == SIGTSTP)
-		raise_fake_isr = 1;
-	sem_post (&keep_going);
+    if (signum == SIGTSTP)
+        raise_fake_isr = 1;
+    sem_post (&keep_going);
 
-	new_action.sa_handler = handle_sig;
-	sigemptyset (&new_action.sa_mask);
-	new_action.sa_flags = SA_RESTART;
+    new_action.sa_handler = handle_sig;
+    sigemptyset (&new_action.sa_mask);
+    new_action.sa_flags = SA_RESTART;
 
-	sigaction (signum, &new_action, NULL);
+    sigaction (signum, &new_action, NULL);
 }
 
 /* Setup termination signals to exit gracefully */
 void
 handle_signals ()
 {
-	struct sigaction new_action, old_action;
+    struct sigaction new_action, old_action;
 
-	/* Turn off buffering on stdout to directly write to log file */
-	setvbuf (stdout, NULL, _IONBF, 0);
+    /* Turn off buffering on stdout to directly write to log file */
+    setvbuf (stdout, NULL, _IONBF, 0);
 
-	/* Set up the structure to specify the new action. */
-	new_action.sa_handler = handle_sig;
-	sigemptyset (&new_action.sa_mask);
-	new_action.sa_flags = SA_RESTART;
-	
-	/* Handle termination signals but avoid handling signals previously set
-	   to be ignored */
-	sigaction (SIGINT, NULL, &old_action);
-	if (old_action.sa_handler != SIG_IGN)
-		sigaction (SIGINT, &new_action, NULL);
-	sigaction (SIGHUP, NULL, &old_action);
-	if (old_action.sa_handler != SIG_IGN)
-		sigaction (SIGHUP, &new_action, NULL);
-	sigaction (SIGTERM, NULL, &old_action);
-	if (old_action.sa_handler != SIG_IGN)
-		sigaction (SIGTERM, &new_action, NULL);
-	sigaction (SIGTSTP, NULL, &old_action);
-	if (old_action.sa_handler != SIG_IGN)
-		sigaction (SIGTSTP, &new_action, NULL);	
+    /* Set up the structure to specify the new action. */
+    new_action.sa_handler = handle_sig;
+    sigemptyset (&new_action.sa_mask);
+    new_action.sa_flags = SA_RESTART;
+    
+    /* Handle termination signals but avoid handling signals previously set
+       to be ignored */
+    sigaction (SIGINT, NULL, &old_action);
+    if (old_action.sa_handler != SIG_IGN)
+        sigaction (SIGINT, &new_action, NULL);
+    sigaction (SIGHUP, NULL, &old_action);
+    if (old_action.sa_handler != SIG_IGN)
+        sigaction (SIGHUP, &new_action, NULL);
+    sigaction (SIGTERM, NULL, &old_action);
+    if (old_action.sa_handler != SIG_IGN)
+        sigaction (SIGTERM, &new_action, NULL);
+    sigaction (SIGTSTP, NULL, &old_action);
+    if (old_action.sa_handler != SIG_IGN)
+        sigaction (SIGTSTP, &new_action, NULL); 
 }
 
 /* Helper function to attempt joining a thread, if a timeout runs out it shall
@@ -115,262 +115,262 @@ handle_signals ()
 static void
 join_or_cancel_thread (pthread_t t, struct timespec *ts)
 {
-	ssize_t s;
+    ssize_t s;
 
-	s = pthread_timedjoin_np (t, NULL, ts);
-	if (s != 0)
-	  {
-	  	printf ("[DEBUG] pthread_timedjoin_np non-zero %s\n", strerror(s));
-	    s = pthread_cancel (t);
-	    if (s != 0)
-	    	log_error_en (s, "error in pthread_cancel");
-	  }
+    s = pthread_timedjoin_np (t, NULL, ts);
+    if (s != 0)
+      {
+        printf ("[DEBUG] pthread_timedjoin_np non-zero %s\n", strerror(s));
+        s = pthread_cancel (t);
+        if (s != 0)
+            log_error_en (s, "error in pthread_cancel");
+      }
 }
 
 /* Helper function to initialize thread attributes and condition variables */
 static int
 setup_thread_attr (struct thread_data *tdata)
 {
-	ssize_t s;
+    ssize_t s;
 
-	s = pthread_mutex_init (&tdata->record_mutex, NULL);
-	if (s != 0)
-	  {
-	    log_error_en (s, "error in pthread_mutex_init");
-		do_cleanup (tdata);
-		return s;	
-	  }
+    s = pthread_mutex_init (&tdata->record_mutex, NULL);
+    if (s != 0)
+      {
+        log_error_en (s, "error in pthread_mutex_init");
+        do_cleanup (tdata);
+        return s;   
+      }
 
-	s = eventfd (0, EFD_CLOEXEC | EFD_NONBLOCK);
-	if (s < 0)
-	  {
-	    log_error ("error in eventfd");
-		do_cleanup (tdata);
-		return s;
-	  }
-	tdata->record_eventfd = s;
+    s = eventfd (0, EFD_CLOEXEC | EFD_NONBLOCK);
+    if (s < 0)
+      {
+        log_error ("error in eventfd");
+        do_cleanup (tdata);
+        return s;
+      }
+    tdata->record_eventfd = s;
 
-	/* Initialize thread creation attributes */
-	s = pthread_attr_init (&tdata->attr);
-	if (s != 0)
-	  {
-		log_error_en (s, "error in pthread_attr_init");
-		do_cleanup (tdata);
-		return s;
-	  }
+    /* Initialize thread creation attributes */
+    s = pthread_attr_init (&tdata->attr);
+    if (s != 0)
+      {
+        log_error_en (s, "error in pthread_attr_init");
+        do_cleanup (tdata);
+        return s;
+      }
 
-	/* Explicitly create threads as joinable, only possible error is EINVAL
-	   if the second parameter (detachstate) is invalid */
-	s = pthread_attr_setdetachstate (&tdata->attr, PTHREAD_CREATE_JOINABLE);
-	if (s != 0)
-	  {
-		log_error_en (s, "error in pthread_attr_setdetachstate");
-		do_cleanup (tdata);		
-	  }
+    /* Explicitly create threads as joinable, only possible error is EINVAL
+       if the second parameter (detachstate) is invalid */
+    s = pthread_attr_setdetachstate (&tdata->attr, PTHREAD_CREATE_JOINABLE);
+    if (s != 0)
+      {
+        log_error_en (s, "error in pthread_attr_setdetachstate");
+        do_cleanup (tdata);     
+      }
 
-	return s;
+    return s;
 }
 
 /* Helper function to create timer thread and start listening on timerfd */
 static int
 create_timer_thread (struct thread_data *tdata)
 {
-	ssize_t s;
+    ssize_t s;
 
-	s = pthread_mutex_init (&tdata->timer_mutex, NULL);
-	if (s != 0)
-	  {
-	    log_error_en (s, "error in pthread_mutex_init");
-		do_cleanup (tdata);
-		return s;	
-	  }
+    s = pthread_mutex_init (&tdata->timer_mutex, NULL);
+    if (s != 0)
+      {
+        log_error_en (s, "error in pthread_mutex_init");
+        do_cleanup (tdata);
+        return s;   
+      }
 
-	tdata->is_recording = ATOMIC_VAR_INIT(false);
-	s = pthread_create (&tdata->timer_t, &tdata->attr, &thread_timeout_start,
-						tdata);
-	if (s != 0)
-	  {
-		log_error_en (s, "error creating timeout thread");
-		do_cleanup (tdata);
-	  }
-	return s;
+    tdata->is_recording = ATOMIC_VAR_INIT(false);
+    s = pthread_create (&tdata->timer_t, &tdata->attr, &thread_timeout_start,
+                        tdata);
+    if (s != 0)
+      {
+        log_error_en (s, "error creating timeout thread");
+        do_cleanup (tdata);
+      }
+    return s;
 }
 
 static int
 create_picam_thread (struct thread_data *tdata)
 {
-	ssize_t s;
+    ssize_t s;
 
-	s = pthread_create (&tdata->picam_t, &tdata->attr, &thread_picam_start,
-						tdata);
-	if (s != 0)
-	  {
-		log_error_en (s, "error creating picam thread");
-		do_cleanup (tdata);
-	  }
-	return s;	
+    s = pthread_create (&tdata->picam_t, &tdata->attr, &thread_picam_start,
+                        tdata);
+    if (s != 0)
+      {
+        log_error_en (s, "error creating picam thread");
+        do_cleanup (tdata);
+      }
+    return s;   
 }
 
 /* Helper function to setup wiringPi and register an interrupt handler */
 static int
 setup_wiringPi (struct thread_data *tdata)
 {
-	ssize_t s;
+    ssize_t s;
 
-	/* Initialize wiringPi with default pin numbering scheme */
-	s = wiringPiSetup ();
-	if (s < 0)
-	  {
-		log_error ("error in wiringPiSetup");
-		do_cleanup (tdata);
-		return s;
-	  }
+    /* Initialize wiringPi with default pin numbering scheme */
+    s = wiringPiSetup ();
+    if (s < 0)
+      {
+        log_error ("error in wiringPiSetup");
+        do_cleanup (tdata);
+        return s;
+      }
 
-	/* Register a interrupt handler on the pin numbered as PIR_PIN */
-	tdata->pir_pin = PIR_PIN;
-	s = wiringPiISR (tdata->pir_pin, INT_EDGE_BOTH, &on_motion_detect, tdata);
-	if (s < 0)
-	  {
-		log_error ("error in wiringPiISR");
-		do_cleanup (tdata);
-	  }
+    /* Register a interrupt handler on the pin numbered as PIR_PIN */
+    tdata->pir_pin = PIR_PIN;
+    s = wiringPiISR (tdata->pir_pin, INT_EDGE_BOTH, &on_motion_detect, tdata);
+    if (s < 0)
+      {
+        log_error ("error in wiringPiISR");
+        do_cleanup (tdata);
+      }
 
-	return s;
+    return s;
 }
 
 int
 main (void)
 {
-	ssize_t s;
-	uint64_t u;
-	struct timespec ts;
-	struct thread_data tdata;
+    ssize_t s;
+    uint64_t u;
+    struct timespec ts;
+    struct thread_data tdata;
 
-	/* Initialize keep_going as binary semaphore initially 0 */
-	sem_init (&keep_going, 0, 0);
+    /* Initialize keep_going as binary semaphore initially 0 */
+    sem_init (&keep_going, 0, 0);
 
-	memset (&tdata, 0, sizeof (tdata));
+    memset (&tdata, 0, sizeof (tdata));
 
-	handle_signals ();
+    handle_signals ();
 
-	s = setup_wiringPi (&tdata);
-	if (s < 0)
-	  {
-	    return 1;
-	  }
-
-	/* Initialize timer used for timeout on video recording */
-	tdata.timerfd = timerfd_create (CLOCK_REALTIME, 0);
-	if (tdata.timerfd  < 0)
-	  {
-	  	log_error ("error in timerfd_create");
-	  	do_cleanup (&tdata);
-		return 1;
-	  }
-
-	/* Create a pipe used to singal all threads to begin shutdown sequence */
-	s = pipe (tdata.timerpipe);
-	if (s < 0)
-	  {
-	    log_error ("error creating pipe");
-	    do_cleanup (&tdata);
-	   	return 1;
-	  }
-
-	s = setup_thread_attr (&tdata);
-	if (s != 0)
-	  {
-	    return 1;
-	  }
-
-	s = create_timer_thread (&tdata);
-	if (s != 0)
-	  {
-	    return 1;
-	  }
-
-	s = create_picam_thread (&tdata);
-	if (s != 0)
-	  {
-	    return 1;
-	  }
-
-	while (1)
-	  {
-	  	sem_wait (&keep_going);
-	  	if (raise_fake_isr)
-	  	  {
-	  	  	atomic_store (&tdata.fake_isr, true);
-	  	  	on_motion_detect ((void *) &tdata);
-	  	  	raise_fake_isr = 0;	  	  	
-	  	  	continue;  	  	
-	  	  }
-	  	break;
-	  }	
-
-	/* **************************************************************** */
-	/*								    								*/
-	/*						Begin shutdown sequence		    			*/
-	/*								    								*/
-	/* **************************************************************** */
-	printf ("[DEBUG] main thread woke up, try to wake up other threads.\n");
-	sem_destroy (&keep_going);	
-
-	/* Write 8 bytes to notify all threads to exit */
-	u = ~0ULL;
-	s = write (tdata.timerpipe[1], &u, sizeof (uint64_t));
-	if (s < 0)
-	  {
-	    log_error ("error in write");
-	  }
-	else if (s != sizeof (uint64_t))
-		printf ("[DEBUG] wrote %d bytes, expected %d bytes\n", s, sizeof (uint64_t));
-
-	/* Fetch current time and put it in ts struct, we use the |= operator
-	   so that if previous call to read failed we will cancel threads */
-	s |= clock_gettime (CLOCK_REALTIME, &ts);
+    s = setup_wiringPi (&tdata);
     if (s < 0)
       {
-		log_error ("error in clock_gettime");
-	    s = pthread_cancel (tdata.timer_t);
-	    if (s != 0)
-	    	log_error ("error in pthread_cancel");
-	   	s = pthread_cancel (tdata.picam_t);
-	    if (s != 0)
-	    	log_error ("error in pthread_cancel");
-      }  		
-   	else
-   	  {
-   		ts.tv_sec += 5;
-   		join_or_cancel_thread (tdata.timer_t, &ts);
-   		join_or_cancel_thread (tdata.picam_t, &ts);
-   	  }
+        return 1;
+      }
 
-   	s = pthread_mutex_destroy (&tdata.record_mutex);
-	if (s != 0)
-		log_error_en (s, "error in pthread_mutex_destroy");
+    /* Initialize timer used for timeout on video recording */
+    tdata.timerfd = timerfd_create (CLOCK_REALTIME, 0);
+    if (tdata.timerfd  < 0)
+      {
+        log_error ("error in timerfd_create");
+        do_cleanup (&tdata);
+        return 1;
+      }
 
-   	s = pthread_mutex_destroy (&tdata.timer_mutex);
-	if (s != 0)
-		log_error_en (s, "error in pthread_mutex_destroy");
+    /* Create a pipe used to singal all threads to begin shutdown sequence */
+    s = pipe (tdata.timerpipe);
+    if (s < 0)
+      {
+        log_error ("error creating pipe");
+        do_cleanup (&tdata);
+        return 1;
+      }
 
-   	s = close (tdata.record_eventfd);
-   	if (s < 0)
-   		log_error ("error in close");
+    s = setup_thread_attr (&tdata);
+    if (s != 0)
+      {
+        return 1;
+      }
 
-   	s = close (tdata.timerpipe[1]);
-   	if (s < 0)
-   		log_error ("error in close");
+    s = create_timer_thread (&tdata);
+    if (s != 0)
+      {
+        return 1;
+      }
 
-   	s = close (tdata.timerpipe[0]);
-   	if (s < 0)
-   		log_error ("error in close");
+    s = create_picam_thread (&tdata);
+    if (s != 0)
+      {
+        return 1;
+      }
 
-   	s = pthread_attr_destroy (&tdata.attr);
-	if (s != 0)
-		log_error_en (s, "error in pthread_attr_destroy");
+    while (1)
+      {
+        sem_wait (&keep_going);
+        if (raise_fake_isr)
+          {
+            atomic_store (&tdata.fake_isr, true);
+            on_motion_detect ((void *) &tdata);
+            raise_fake_isr = 0;         
+            continue;       
+          }
+        break;
+      } 
 
-	return 0;
+    /* **************************************************************** */
+    /*                                                                  */
+    /*                      Begin shutdown sequence                     */
+    /*                                                                  */
+    /* **************************************************************** */
+    printf ("[DEBUG] main thread woke up, try to wake up other threads.\n");
+    sem_destroy (&keep_going);  
+
+    /* Write 8 bytes to notify all threads to exit */
+    u = ~0ULL;
+    s = write (tdata.timerpipe[1], &u, sizeof (uint64_t));
+    if (s < 0)
+      {
+        log_error ("error in write");
+      }
+    else if (s != sizeof (uint64_t))
+        printf ("[DEBUG] wrote %d bytes, expected %d bytes\n", s, sizeof (uint64_t));
+
+    /* Fetch current time and put it in ts struct, we use the |= operator
+       so that if previous call to read failed we will cancel threads */
+    s |= clock_gettime (CLOCK_REALTIME, &ts);
+    if (s < 0)
+      {
+        log_error ("error in clock_gettime");
+        s = pthread_cancel (tdata.timer_t);
+        if (s != 0)
+            log_error ("error in pthread_cancel");
+        s = pthread_cancel (tdata.picam_t);
+        if (s != 0)
+            log_error ("error in pthread_cancel");
+      }         
+    else
+      {
+        ts.tv_sec += 5;
+        join_or_cancel_thread (tdata.timer_t, &ts);
+        join_or_cancel_thread (tdata.picam_t, &ts);
+      }
+
+    s = pthread_mutex_destroy (&tdata.record_mutex);
+    if (s != 0)
+        log_error_en (s, "error in pthread_mutex_destroy");
+
+    s = pthread_mutex_destroy (&tdata.timer_mutex);
+    if (s != 0)
+        log_error_en (s, "error in pthread_mutex_destroy");
+
+    s = close (tdata.record_eventfd);
+    if (s < 0)
+        log_error ("error in close");
+
+    s = close (tdata.timerpipe[1]);
+    if (s < 0)
+        log_error ("error in close");
+
+    s = close (tdata.timerpipe[0]);
+    if (s < 0)
+        log_error ("error in close");
+
+    s = pthread_attr_destroy (&tdata.attr);
+    if (s != 0)
+        log_error_en (s, "error in pthread_attr_destroy");
+
+    return 0;
 }
 
 static

@@ -1,6 +1,6 @@
 /*
- *	motion.h
- *	  The names of functions callable from within motion
+ *  motion.h
+ *    The names of functions callable from within motion
  *****************************************************************************
  *  This file is part of Fågelmataren, an embedded project created to learn
  *  Linux and C. See <https://github.com/Linkaan/Fagelmatare>

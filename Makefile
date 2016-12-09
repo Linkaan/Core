@@ -1,6 +1,6 @@
 #
 # Makefile:
-#	defines rules to build the fagelmatare core module. Setup for cross
+#   defines rules to build the fagelmatare core module. Setup for cross
 #   compilation with crosstool-ng
 ##############################################################################
 #  This file is part of Fågelmataren, an advanced bird feeder equipped with
@@ -33,15 +33,15 @@ EXECUTABLE := fagelmatare-core
 all: $(SOURCES) $(EXECUTABLE)
 
 $(EXECUTABLE): $(OBJECTS)
-	$(CC) $(OBJECTS) -o $@ $(LDFLAGS)
+    $(CC) $(OBJECTS) -o $@ $(LDFLAGS)
 
 %.o: %.c $(HEADERS)
-	ifndef CC
-	$(error CC not set, please invoke with CC set to path of arm-rpi-linux-gnueabihf-gcc)
-	endif
-	$(CC) -c $< -o $@ $(CFLAGS)
+    ifndef CC
+    $(error CC not set, please invoke with CC set to path of arm-rpi-linux-gnueabihf-gcc)
+    endif
+    $(CC) -c $< -o $@ $(CFLAGS)
 
 .PHONY: clean
 
 clean:
-	rm -f $(EXECUTABLE) $(OBJECTS)
+    rm -f $(EXECUTABLE) $(OBJECTS)
