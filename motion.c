@@ -35,7 +35,7 @@
 #include "common.h"
 
 /* Forward declarations used in this file. */
-static int reset_timer (int, const int, const int);
+static int reset_timer (struct thread_data *, const int, const int);
 
 /* Callback function for interrupts on pin numbered as PIR_PIN (see core.c) */
 void
@@ -97,9 +97,9 @@ reset_timer(struct thread_data *tdata, const int secs, const int isecs)
   timer_value.it_interval.tv_sec = isecs;
   timer_value.it_interval.tv_nsec = 0;
 
-  pthread_mutex_lock (tdata->timer_mutex);
-  s = timerfd_settime (timerfd, 0, &timer_value, NULL);
-  pthread_mutex_unlock (tdata->timer_mutex);
+  pthread_mutex_lock (&tdata->timer_mutex);
+  s = timerfd_settime (tdata->timerfd, 0, &timer_value, NULL);
+  pthread_mutex_unlock (&tdata->timer_mutex);
   if (s < 0)
     log_error ("timerfd_settime failed");    
 
