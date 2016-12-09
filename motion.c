@@ -47,7 +47,7 @@ on_motion_detect (void *arg)
 
 	if (digitalRead (tdata->pir_pin) == HIGH || atomic_compare_exchange_weak (&tdata->fake_isr, (_Bool[]) { true }, false))
 	  {
-		reset_timer (tdata->timerfd, 5, 0);
+		reset_timer (tdata, 5, 0);
 		if (atomic_compare_exchange_weak (&tdata->is_recording, (_Bool[]) { false }, true))
 		  {
 		  	/* Send start recording event */
@@ -63,17 +63,26 @@ on_motion_detect (void *arg)
                 printf ("[DEBUG] wrote %d bytes, expected %d bytes\n", s, sizeof (uint64_t));
             pthread_mutex_unlock (&tdata->record_mutex);
 		  }
-		else
-		  {
-		  	if (atomic_load (&tdata->is_recording))
-      			reset_timer (tdata->timerfd, 5, 0);
-		  }
 	  }
+	else if (atomic_load (&tdata->is_recording))
+  		reset_timer (tdata, 5, 0);
+}
+
+/* Function to reset timer if PIR sensor is still HIGH */
+int
+check_sensor_active (struct thread_data *tdata)
+{
+	int b = digitalRead (tdata->pir_pin) == HIGH && atomic_load (&tdata->is_recording);
+
+	if (b)
+		reset_timer (tdata, 5, 0);
+
+	return b;
 }
 
 /* Helper function to set timerfd to a specified timer value */
 static int
-reset_timer(int timerfd, const int secs, const int isecs)
+reset_timer(struct thread_data *tdata, const int secs, const int isecs)
 {
   ssize_t s;
   struct itimerspec timer_value;
@@ -88,7 +97,9 @@ reset_timer(int timerfd, const int secs, const int isecs)
   timer_value.it_interval.tv_sec = isecs;
   timer_value.it_interval.tv_nsec = 0;
 
+  pthread_mutex_lock (tdata->timer_mutex);
   s = timerfd_settime (timerfd, 0, &timer_value, NULL);
+  pthread_mutex_unlock (tdata->timer_mutex);
   if (s < 0)
     log_error ("timerfd_settime failed");    
 

@@ -31,6 +31,7 @@
 
 #include <wiringPi/wiringPi.h>
 
+#include "motion.h"
 #include "timeout.h"
 #include "common.h"
 
@@ -84,7 +85,7 @@ thread_timeout_start(void *arg)
 	  		log_error("poll failed");
 	  	else if (s > 0)
 	  	  {
-            if (atomic_load (&tdata->is_recording))
+            if (check_sensor_active (tdata))
               {
                 pthread_cleanup_push (&cleanup_handler, &itdata);
                 pthread_mutex_lock (&itdata.record_mutex);

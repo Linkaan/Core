@@ -68,6 +68,7 @@ struct thread_data {
   	pthread_t 		picam_t;
 	pthread_attr_t	attr;
 	pthread_mutex_t record_mutex;
+    pthread_mutex_t timer_mutex;
 };
 
 #endif /* _COMMON_H_ */

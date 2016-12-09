@@ -24,7 +24,12 @@
 #ifndef _MOTION_H_
 #define _MOTION_H_
 
+#include "common.h"
+
 /* This function is invoked by core as the timer thread is created */
 extern void on_motion_detect (void *);
+
+/* This function is used to reset timerfd if PIR sensor is still HIGH */
+extern int check_sensor_active (struct thread_data *tdata);
 
 #endif /* _MOTION_H_ */

@@ -177,6 +177,14 @@ create_timer_thread (struct thread_data *tdata)
 {
 	ssize_t s;
 
+	s = pthread_mutex_init (&tdata->timer_mutex, NULL);
+	if (s != 0)
+	  {
+	    log_error_en (s, "error in pthread_mutex_init");
+		do_cleanup (tdata);
+		return s;	
+	  }
+
 	tdata->is_recording = ATOMIC_VAR_INIT(false);
 	s = pthread_create (&tdata->timer_t, &tdata->attr, &thread_timeout_start,
 						tdata);
@@ -342,13 +350,17 @@ main (void)
 	if (s != 0)
 		log_error_en (s, "error in pthread_mutex_destroy");
 
+   	s = pthread_mutex_destroy (&tdata.timer_mutex);
+	if (s != 0)
+		log_error_en (s, "error in pthread_mutex_destroy");
+
    	s = close (tdata.record_eventfd);
    	if (s < 0)
    		log_error ("error in close");
 
    	s = close (tdata.timerpipe[1]);
    	if (s < 0)
-   		log_error ("error in close");   
+   		log_error ("error in close");
 
    	s = close (tdata.timerpipe[0]);
    	if (s < 0)
