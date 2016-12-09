@@ -86,6 +86,9 @@ handle_signals ()
 {
 	struct sigaction new_action, old_action;
 
+	/* Turn off buffering on stdout to directly write to log file */
+	setvbuf (stdout, NULL, _IONBF, 0);
+
 	/* Set up the structure to specify the new action. */
 	new_action.sa_handler = handle_sig;
 	sigemptyset (&new_action.sa_mask);

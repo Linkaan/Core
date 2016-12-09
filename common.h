@@ -37,9 +37,9 @@
 #endif
 
 /* Temporary defs before config file is setup */
-#define PICAM_STATE_DIR "/home/tc/state"
-#define PICAM_STOP_HOOK "/home/tc/hooks/stop_record"
-#define PICAM_START_HOOK "/home/tc/hooks/start_record"
+#define PICAM_STATE_DIR "/mnt/mmcblk0p2/picam/state"
+#define PICAM_STOP_HOOK "/mnt/mmcblk0p2/picam/hooks/stop_record"
+#define PICAM_START_HOOK "/mnt/mmcblk0p2/picam/hooks/start_record"
 
 /* Simple macro used to print error messages with location */
 #define log_error(msg)\
