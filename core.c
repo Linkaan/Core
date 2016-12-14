@@ -175,6 +175,7 @@ setup_thread_attr (struct thread_data *tdata)
 static int
 create_timer_thread (struct thread_data *tdata)
 {
+    struct sched_param param;
     ssize_t s;
 
     s = pthread_mutex_init (&tdata->timer_mutex, NULL);
@@ -191,6 +192,16 @@ create_timer_thread (struct thread_data *tdata)
     if (s != 0)
       {
         log_error_en (s, "error creating timeout thread");
+        do_cleanup (tdata);
+      }
+
+    memset (&param, 0, sizeof (sched_param));
+    param.sched_priority = 1;
+
+    s = pthread_setschedparam(tdata->timer_t, SCHED_FIFO, &param);
+    if (s != 0)
+      {
+        log_error_en (s, "error in pthread_setschedparam");
         do_cleanup (tdata);
       }
     return s;
