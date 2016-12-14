@@ -41,11 +41,15 @@ static int reset_timer (struct thread_data *, const int, const int);
 void
 on_motion_detect (void *arg)
 {
+    int b;
     ssize_t s;
     uint64_t u;
     struct thread_data *tdata = arg;
 
-    if (digitalRead (tdata->pir_pin) == HIGH || atomic_compare_exchange_weak (&tdata->fake_isr, (_Bool[]) { true }, false))
+    pthread_mutex_lock (&tdata->wiring_mutex);
+    b = digitalRead (tdata->pir_pin) == HIGH;
+    pthread_mutex_unlock (&tdata->wiring_mutex);
+    if (b && atomic_compare_exchange_weak (&tdata->fake_isr, (_Bool[]) { true }, false))
       {
         reset_timer (tdata, 5, 0);
         if (atomic_compare_exchange_weak (&tdata->is_recording, (_Bool[]) { false }, true))
@@ -74,7 +78,9 @@ check_sensor_active (struct thread_data *tdata)
 {
     int b;
 
+    pthread_mutex_lock (&tdata->wiring_mutex);
     b = digitalRead (tdata->pir_pin) == HIGH;
+    pthread_mutex_unlock (&tdata->wiring_mutex);
     if (b != 0)
         reset_timer (tdata, 5, 0);
 
@@ -97,10 +103,8 @@ reset_timer(struct thread_data *tdata, const int secs, const int isecs)
   timer_value.it_value.tv_nsec = 0;
   timer_value.it_interval.tv_sec = isecs;
   timer_value.it_interval.tv_nsec = 0;
-
-  pthread_mutex_lock (&tdata->timer_mutex);
+  
   s = timerfd_settime (tdata->timerfd, 0, &timer_value, NULL);
-  pthread_mutex_unlock (&tdata->timer_mutex);
   if (s < 0)
     log_error ("timerfd_settime failed");    
 

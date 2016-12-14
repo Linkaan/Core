@@ -178,14 +178,6 @@ create_timer_thread (struct thread_data *tdata)
     struct sched_param param;
     ssize_t s;
 
-    s = pthread_mutex_init (&tdata->timer_mutex, NULL);
-    if (s != 0)
-      {
-        log_error_en (s, "error in pthread_mutex_init");
-        do_cleanup (tdata);
-        return s;   
-      }
-
     tdata->is_recording = ATOMIC_VAR_INIT(false);
     s = pthread_create (&tdata->timer_t, &tdata->attr, &thread_timeout_start,
                         tdata);
@@ -227,6 +219,14 @@ static int
 setup_wiringPi (struct thread_data *tdata)
 {
     ssize_t s;
+
+    s = pthread_mutex_init (&tdata->wiring_mutex, NULL);
+    if (s != 0)
+      {
+        log_error_en (s, "error in pthread_mutex_init");
+        do_cleanup (tdata);
+        return s;   
+      }
 
     /* Initialize wiringPi with default pin numbering scheme */
     s = wiringPiSetup ();
@@ -361,7 +361,7 @@ main (void)
     if (s != 0)
         log_error_en (s, "error in pthread_mutex_destroy");
 
-    s = pthread_mutex_destroy (&tdata.timer_mutex);
+    s = pthread_mutex_destroy (&tdata.wiring_mutex);
     if (s != 0)
         log_error_en (s, "error in pthread_mutex_destroy");
 
