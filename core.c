@@ -187,7 +187,7 @@ create_timer_thread (struct thread_data *tdata)
         do_cleanup (tdata);
       }
 
-    memset (&param, 0, sizeof (sched_param));
+    memset (&param, 0, sizeof (struct sched_param));
     param.sched_priority = 1;
 
     s = pthread_setschedparam(tdata->timer_t, SCHED_FIFO, &param);
