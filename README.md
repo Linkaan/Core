@@ -2,7 +2,7 @@
 
 ==================================
 [![Fagelmatare GPLv3 License](https://img.shields.io/badge/licens-GPLv3_License-blue.svg)](LICENSE)  
-This module is part of [Fagelmatare](https://github.com/Linkaan/Fagelamtare).  
+This module is part of [Fagelmatare](https://github.com/Linkaan/Fagelmatare).  
 An embedded project created to learn Linux and C. Feeds and records birds using a PIR sensor.
 
 Copyright (C) 2016 Linus Styrén <linus122xbb@gmail.com>
