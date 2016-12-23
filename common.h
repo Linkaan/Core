@@ -31,26 +31,20 @@
 #include <stdint.h>
 #include <errno.h>
 
+#include "log.h"
+
 /* Define _GNU_SOURCE for pthread_timedjoin_np and asprintf */
 #ifndef _GNU_SOURCE
 #define _GNU_SOURCE
 #endif
+
+#define TIMESTAMP_MAX_LENGTH 32
 
 /* Temporary defs before config file is setup */
 #define PICAM_STATE_DIR "/mnt/mmcblk0p2/picam/state"
 #define PICAM_STOP_HOOK "/mnt/mmcblk0p2/picam/hooks/stop_record"
 #define PICAM_START_HOOK "/mnt/mmcblk0p2/picam/hooks/start_record"
 
-/* Simple macro used to print error messages with location */
-#define log_error(msg)\
-        fprintf(stderr, "%s: %s: %d: %s: %s\n", __progname,\
-                __FILE__, __LINE__, msg, strerror (errno))
-
-/* Extension of above macro, the do { ... } while(0) part is a workaround
-   for the issue of using this macro on a single line if statement without
-   a body */
-#define log_error_en(en, msg)\
-        do { errno = en;log_error (msg); } while(0)
 
 /* String containing name the program is called with.
    To be initialized by main(). */
@@ -70,5 +64,24 @@ struct thread_data {
     pthread_mutex_t record_mutex;
     pthread_mutex_t wiring_mutex;
 };
+
+inline const char *
+fetch_timestamp ()
+{
+    time_t ltime;
+    struct tm result;
+    char *stime;
+
+    stime = malloc (TIMESTAMP_MAX_LENGTH);
+    if (stime == NULL)
+        log_error_no_timestamp ("malloc failed for timestamp");
+    else
+      {
+        ltime = time(NULL);
+        localtime_r(&ltime, &result);
+        asctime_r(&result, stime);        
+      }
+    return stime;
+}
 
 #endif /* _COMMON_H_ */
