@@ -47,7 +47,7 @@ struct internal_t_data {
 
 /* Start routine for timer thread */
 void *
-thread_timeout_start(void *arg)
+thread_timeout_start (void *arg)
 {
     ssize_t s, events;
     uint64_t u;
@@ -80,25 +80,23 @@ thread_timeout_start(void *arg)
         /* Passing -1 to poll as third argument means to block (INFTIM) */
         s = poll (itdata.poll_fds, 2, -1);
 
-        printf ("[DEBUG] timeout thread poll returned %d (timerpipe revents %d, events %d)\n", s, itdata.poll_fds[1].revents & events, events);
         if (s < 0)
             log_error("poll failed");
         else if (s > 0)
           {
-            if (!check_sensor_active (tdata) && atomic_load (&tdata->is_recording))
+            if (!check_sensor_active (tdata) &&
+                atomic_load (&tdata->is_recording))
               {
                 pthread_cleanup_push (&cleanup_handler, &itdata);
                 pthread_mutex_lock (&itdata.record_mutex);
 
-                /* Instead of using a pthread condition variable we use a eventfd
-                   object to notify other threads because we can then poll on
-                   multiple file descriptors */
+                /* Instead of using a pthread condition variable we use a
+                   eventfd object to notify other threads because we can then
+                   poll on multiple file descriptors */
                 u = 2;
                 s = write (tdata->record_eventfd, &u, sizeof (uint64_t));
                 if (s < 0)
                     log_error ("write failed");
-                else if (s != sizeof (uint64_t))
-                    printf ("[DEBUG] wrote %d bytes, expected %d bytes\n", s, sizeof (uint64_t));
 
                 pthread_cleanup_pop (1);
               }
@@ -106,7 +104,6 @@ thread_timeout_start(void *arg)
             /* If there is data to read on timerpipe, we shall exit */
             if (itdata.poll_fds[1].revents & events)
               {
-                printf ("[DEBUG] timeout thread notified to exit!\n");
                 break;
               }
 
@@ -115,8 +112,6 @@ thread_timeout_start(void *arg)
                 s = read (itdata.poll_fds[0].fd, &u, sizeof (uint64_t));
                 if (s < 0)
                     log_error ("read failed");
-                else if (s != sizeof (uint64_t))
-                    printf ("[DEBUG] read %d bytes, expected %d bytes\n", s, sizeof (uint64_t));
               }            
           }
       }

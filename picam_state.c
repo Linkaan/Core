@@ -67,7 +67,8 @@ struct internal_t_data {
 static void cleanup_handler (void *);
 
 static void handle_state_file_created (struct internal_t_data *);
-static void handle_state_file (struct internal_t_data *, const char *, const char *);
+static void handle_state_file (struct internal_t_data *, const char *,
+                               const char *);
 static void handle_record_event (struct internal_t_data *, const uint64_t);
 
 static int setup_inotify (struct internal_t_data *);
@@ -113,14 +114,12 @@ thread_picam_start (void *arg)
         /* Passing -1 to poll as third argument means to block (INFTIM) */
         s = poll (itdata.poll_fds, 3, -1);
 
-        printf ("[DEBUG] picam thread poll returned %d (record_eventfd revents %d, timerpipe revents %d)\n", s, itdata.poll_fds[2].revents & events, itdata.poll_fds[1].revents & events);
         if (s < 0)
             log_error ("poll failed");
         else if (s > 0)
           {
             if (itdata.poll_fds[1].revents & events)
               {
-                printf ("[DEBUG] picam thread notified to exit!\n");
                 break;
               }
             else if (itdata.poll_fds[0].revents & events)
@@ -135,12 +134,7 @@ thread_picam_start (void *arg)
                     s = read (itdata.poll_fds[2].fd, &u, sizeof (uint64_t));
                     if (s < 0)
                         log_error ("read failed");
-                    else if (s != sizeof (uint64_t))
-                        printf ("[DEBUG] read %d bytes, expected %d bytes\n", s, sizeof (uint64_t));
                     pthread_mutex_unlock (&tdata->record_mutex);
-
-                    printf ("[DEBUG] got %" PRIu64 " from eventfd\n", u);
-
                     handle_record_event (&itdata, u);
                   }                
               }
@@ -171,53 +165,48 @@ handle_state_file_created (struct internal_t_data *itdata)
     for (char *p = buf; p < buf + nbytes;)
       {
         struct inotify_event *event = (struct inotify_event *) p;
-        if (event->len)
+        if (event->len && event->mask & itdata->inotify_mask &&
+            !(event->mask & IN_ISDIR)) /* Ignore all directories */
           {
-            if (event->mask & itdata->inotify_mask)
+            /* We add 2 bytes for the delimiter and nul-terminator */
+            int path_len = itdata->dir_strlen + strlen (event->name) + 2;
+            itdata->path = malloc (path_len);
+            if (itdata->path == NULL)
+              log_error ("malloc for file path failed");
+            else
               {
-                /* Ignore all directories */
-                if (!(event->mask & IN_ISDIR))
+                s = snprintf (itdata->path, path_len, "%s/%s", itdata->dir,
+                              event->name);
+
+                itdata->fp = fopen (itdata->path, "rb");
+                if (itdata->fp)
                   {
-                    /* We add 2 bytes for the delimiter and nul-terminator */
-                    int path_len = itdata->dir_strlen + strlen (event->name) + 2;
-                    itdata->path = malloc (path_len);
-                    if (itdata->path == NULL)
-                      log_error ("malloc for file path failed");
-                    else
+                    fseek (itdata->fp, 0, SEEK_END);
+                    long content_len = ftell (itdata->fp);
+                    fseek (itdata->fp, 0, SEEK_SET);
+
+                    itdata->content = malloc (content_len + 1);                                     
+                    if (itdata->content)
                       {
-                        s = snprintf (itdata->path, path_len, "%s/%s", itdata->dir, event->name);
-
-                        itdata->fp = fopen (itdata->path, "rb");
-                        if (itdata->fp)
-                          {
-                            fseek (itdata->fp, 0, SEEK_END);
-                            long content_len = ftell (itdata->fp);
-                            fseek (itdata->fp, 0, SEEK_SET);
-
-                            itdata->content = malloc (content_len + 1);                                     
-                            if (itdata->content)
-                              {
-                                fread (itdata->content, 1, content_len, itdata->fp);                            
-                                itdata->content[content_len] = '\0';
-                              }
-                            else
-                                log_error ("malloc for file content failed");
-                            fclose (itdata->fp);
-                            itdata->fp = NULL;
-                          }
-                        else
-                            log_error ("fopen failed");
-                        handle_state_file (itdata, event->name, itdata->content);
-                        free (itdata->content);
-                        itdata->content = NULL;
+                        fread (itdata->content, 1, content_len, itdata->fp);                            
+                        itdata->content[content_len] = '\0';
                       }
-                    s = unlink (itdata->path);
-                    if (s < 0)
-                        log_error ("unlink failed");
-                    free (itdata->path);
-                    itdata->path = NULL;
+                    else
+                        log_error ("malloc for file content failed");
+                    fclose (itdata->fp);
+                    itdata->fp = NULL;
                   }
+                else
+                    log_error ("fopen failed");
+                handle_state_file (itdata, event->name, itdata->content);
+                free (itdata->content);
+                itdata->content = NULL;
               }
+            s = unlink (itdata->path);
+            if (s < 0)
+                log_error ("unlink failed");
+            free (itdata->path);
+            itdata->path = NULL;
           }
         p += sizeof (struct inotify_event) + event->len;
       }
@@ -225,37 +214,34 @@ handle_state_file_created (struct internal_t_data *itdata)
 
 /* Helper function for when a new state file is created */
 static void
-handle_state_file (struct internal_t_data *itdata, const char *filename, const char *content)
+handle_state_file (struct internal_t_data *itdata, const char *filename,
+                   const char *content)
 {
     ssize_t s;
 
-    if (strcmp (filename, "record") == 0)
+    if (strcmp (filename, "record") == 0 && content != NULL)
       {
-        if (content != NULL)
+        if (strcmp (content, "false") == 0)
           {
-            if (strcmp (content, "false") == 0)
+            if (atomic_compare_exchange_weak (itdata->is_recording, (_Bool[])
+                { true }, false))
               {
-                printf ("[DEBUG] should stop recording (is recording: %s)\n", atomic_load (itdata->is_recording) ? "true" : "false");
-                if (atomic_compare_exchange_weak (itdata->is_recording, (_Bool[]) { true }, false))
-                  {
-                    s = clock_gettime (CLOCK_REALTIME, &itdata->end);
-                    if (s < 0)
-                        printf ("recorded video\n");
-                    else
-                      {
-                        double elapsed = (itdata->end.tv_sec - itdata->start.tv_sec) * 1E9 + itdata->end.tv_nsec - itdata->start.tv_nsec;
-                        printf ("recorded video of length %lf seconds\n", elapsed / 1E9);
-                      }                 
-                  }
+                s = clock_gettime (CLOCK_REALTIME, &itdata->end);
+                double elapsed = (itdata->end.tv_sec - itdata->start.tv_sec) *
+                                  1E9 + itdata->end.tv_nsec -
+                                  itdata->start.tv_nsec;
+                printf ("recorded video of length %lf seconds\n",
+                        elapsed / 1E9);               
               }
-            else if (strcmp (content, "true") == 0)
-              {
-                printf ("started recording (is recording: %s)\n", atomic_load (itdata->is_recording) ? "true" : "false");
-                s = clock_gettime (CLOCK_REALTIME, &itdata->start);
-              }
-            else
-                printf ("record state changed to %s\n", content);
           }
+        else if (strcmp (content, "true") == 0)
+          {
+            printf ("started recording (is recording: %s)\n",
+                    atomic_load (itdata->is_recording) ? "true" : "false");
+            s = clock_gettime (CLOCK_REALTIME, &itdata->start);
+          }
+        else
+            printf ("record state changed to %s\n", content);
       }
 }
 
@@ -268,15 +254,12 @@ handle_record_event (struct internal_t_data *itdata, const uint64_t u)
     switch (u % 2)
       {
         case 1: // start recording if u is not divisible by 2
-            printf ("[DEBUG] starting picam recording!\n");
             s = touch (itdata->picam_start_hook);
             break;
         case 0: // stop recording otherwise
-            printf ("[DEBUG] stopping picam recording!\n");
             s = touch (itdata->picam_stop_hook);
             if (s == 0 && !itdata->watch_state_enabled)
               {
-                printf("[DEBUG] setting is_recording to false\n");
                 atomic_store (itdata->is_recording, false);
               }
             break;
@@ -334,7 +317,8 @@ setup_inotify (struct internal_t_data *itdata)
       }
 
     itdata->inotify_mask = IN_CLOSE_WRITE;
-    itdata->wd = inotify_add_watch (itdata->inotify_fd, itdata->dir, itdata->inotify_mask);
+    itdata->wd = inotify_add_watch (itdata->inotify_fd, itdata->dir,
+                                    itdata->inotify_mask);
 
     return 0;
 }

@@ -49,10 +49,12 @@ on_motion_detect (void *arg)
     pthread_mutex_lock (&tdata->wiring_mutex);
     b = digitalRead (tdata->pir_pin) == HIGH;
     pthread_mutex_unlock (&tdata->wiring_mutex);
-    if (b || atomic_compare_exchange_weak (&tdata->fake_isr, (_Bool[]) { true }, false))
+    if (b || atomic_compare_exchange_weak (&tdata->fake_isr, (_Bool[])
+             { true }, false))
       {
         reset_timer (tdata, 5, 0);
-        if (atomic_compare_exchange_weak (&tdata->is_recording, (_Bool[]) { false }, true))
+        if (atomic_compare_exchange_weak (&tdata->is_recording, (_Bool[])
+            { false }, true))
           {
             /* Send start recording event */
             pthread_mutex_lock (&tdata->record_mutex);        
@@ -63,8 +65,6 @@ on_motion_detect (void *arg)
                 log_error ("write failed");
                 atomic_store (&tdata->is_recording, false);
               }
-            else if (s != sizeof (uint64_t))
-                printf ("[DEBUG] wrote %d bytes, expected %d bytes\n", s, sizeof (uint64_t));
             pthread_mutex_unlock (&tdata->record_mutex);
           }
       }

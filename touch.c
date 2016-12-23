@@ -125,7 +125,8 @@ touch (const char *file)
    unsupported, which can allow operation on FILE as a symlink.
    Return 0 on success, -1 (setting errno) on failure. */
 int
-fdutimensat (int fd, int dir, char const *file, struct timespec const ts[2], int atflag)
+fdutimensat (int fd, int dir, char const *file, struct timespec const ts[2],
+             int atflag)
 {
   int result = 1;
 

@@ -120,7 +120,6 @@ join_or_cancel_thread (pthread_t t, struct timespec *ts)
     s = pthread_timedjoin_np (t, NULL, ts);
     if (s != 0)
       {
-        printf ("[DEBUG] pthread_timedjoin_np non-zero %s\n", strerror(s));
         s = pthread_cancel (t);
         if (s != 0)
             log_error_en (s, "error in pthread_cancel");
@@ -190,7 +189,7 @@ create_timer_thread (struct thread_data *tdata)
     memset (&param, 0, sizeof (struct sched_param));
     param.sched_priority = 1;
 
-    s = pthread_setschedparam(tdata->timer_t, SCHED_FIFO, &param);
+    s = pthread_setschedparam (tdata->timer_t, SCHED_FIFO, &param);
     if (s != 0)
       {
         log_error_en (s, "error in pthread_setschedparam");
@@ -324,7 +323,6 @@ main (void)
     /*                      Begin shutdown sequence                     */
     /*                                                                  */
     /* **************************************************************** */
-    printf ("[DEBUG] main thread woke up, try to wake up other threads.\n");
     sem_destroy (&keep_going);  
 
     /* Write 8 bytes to notify all threads to exit */
@@ -334,8 +332,6 @@ main (void)
       {
         log_error ("error in write");
       }
-    else if (s != sizeof (uint64_t))
-        printf ("[DEBUG] wrote %d bytes, expected %d bytes\n", s, sizeof (uint64_t));
 
     /* Fetch current time and put it in ts struct, we use the |= operator
        so that if previous call to read failed we will cancel threads */
