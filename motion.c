@@ -49,6 +49,8 @@ on_motion_detect (void *arg)
     pthread_mutex_lock (&tdata->wiring_mutex);
     b = digitalRead (tdata->pir_pin) == HIGH;
     pthread_mutex_unlock (&tdata->wiring_mutex);
+
+    _log_debug ("");
     if (b || atomic_compare_exchange_weak (&tdata->fake_isr, (_Bool[])
              { true }, false))
       {
@@ -93,6 +95,9 @@ reset_timer(struct thread_data *tdata, const int secs, const int isecs)
 {
   ssize_t s;
   struct itimerspec timer_value;
+
+  _log_debug ("resetting timer (is_recording = %s)\n",
+              atomic_load (itdata->is_recording) ? "true" : "false");
 
   /*
    * Set timer_value to a delay of secs seconds, if isecs is set to a

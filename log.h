@@ -26,7 +26,8 @@
 
 #include "common.h"
 
-#ifndef DEBUG
+/* If _DEBUG is not defined, we simply replace all _log_debug with nothing */
+#ifndef _DEBUG
 #define _log_debug(format, ...)
 #else
 #define _log_debug(format, ...) log_debug (format, ##__VA_ARGS__)

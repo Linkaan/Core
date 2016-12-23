@@ -100,6 +100,12 @@ thread_timeout_start (void *arg)
 
                 pthread_cleanup_pop (1);
               }
+            else
+              {
+                _log_debug ("not stopping recording (is_recording = %s)\n",
+                            atomic_load (itdata->is_recording) ? "true" :
+                                                                 "false");
+              }
 
             /* If there is data to read on timerpipe, we shall exit */
             if (itdata.poll_fds[1].revents & events)

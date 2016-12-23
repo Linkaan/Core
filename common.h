@@ -38,6 +38,9 @@
 #define _GNU_SOURCE
 #endif
 
+/* Define _DEBUG to enable debug messages */
+#define _DEBUG
+
 #define TIMESTAMP_MAX_LENGTH 32
 
 /* Temporary defs before config file is setup */

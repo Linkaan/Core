@@ -230,18 +230,19 @@ handle_state_file (struct internal_t_data *itdata, const char *filename,
                 double elapsed = (itdata->end.tv_sec - itdata->start.tv_sec) *
                                   1E9 + itdata->end.tv_nsec -
                                   itdata->start.tv_nsec;
-                printf ("recorded video of length %lf seconds\n",
-                        elapsed / 1E9);               
+                _log_debug ("recorded video of length %lf seconds\n",
+                            elapsed / 1E9);               
               }
           }
         else if (strcmp (content, "true") == 0)
           {
-            printf ("started recording (is recording: %s)\n",
-                    atomic_load (itdata->is_recording) ? "true" : "false");
+            _log_debug ("started recording (is recording = %s)\n",
+                        atomic_load (itdata->is_recording) ? "true" :
+                                                             "false");
             s = clock_gettime (CLOCK_REALTIME, &itdata->start);
           }
         else
-            printf ("record state changed to %s\n", content);
+            _log_debug ("record state changed to %s\n", content);
       }
 }
 
@@ -251,12 +252,14 @@ handle_record_event (struct internal_t_data *itdata, const uint64_t u)
 {
     ssize_t s;  
 
-    switch (u % 2)
+    switch (u)
       {
-        case 1: // start recording if u is not divisible by 2
+        case 1:
+            _log_debug ("informing picam to start recording\n");
             s = touch (itdata->picam_start_hook);
             break;
-        case 0: // stop recording otherwise
+        case 2:
+            _log_debug ("informing picam to stop recording\n");
             s = touch (itdata->picam_stop_hook);
             if (s == 0 && !itdata->watch_state_enabled)
               {
