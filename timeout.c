@@ -34,6 +34,7 @@
 #include "motion.h"
 #include "timeout.h"
 #include "common.h"
+#include "log.h"
 
 /* Forward declarations used in this file. */
 static void cleanup_handler (void *);
@@ -103,7 +104,7 @@ thread_timeout_start (void *arg)
             else
               {
                 _log_debug ("not stopping recording (is_recording = %s)\n",
-                            atomic_load (itdata->is_recording) ? "true" :
+                            atomic_load (&tdata->is_recording) ? "true" :
                                                                  "false");
               }
 

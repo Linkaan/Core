@@ -44,6 +44,7 @@
 #include "motion.h"
 #include "timeout.h"
 #include "common.h"
+#include "log.h"
 
 /* The PIR sensor is wired to the physical pin 31 (wiringPi pin 21) */
 #define PIR_PIN 21

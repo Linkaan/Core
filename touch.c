@@ -49,6 +49,7 @@
 #include <sys/ioctl.h>
 
 #include "common.h"
+#include "log.h"
 
 /* Forward declarations used in this file. */
 int fdutimensat(int, int, char const *, struct timespec const ts[2], int);

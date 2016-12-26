@@ -31,8 +31,6 @@
 #include <stdint.h>
 #include <errno.h>
 
-#include "log.h"
-
 /* Define _GNU_SOURCE for pthread_timedjoin_np and asprintf */
 #ifndef _GNU_SOURCE
 #define _GNU_SOURCE
@@ -67,24 +65,5 @@ struct thread_data {
     pthread_mutex_t record_mutex;
     pthread_mutex_t wiring_mutex;
 };
-
-inline const char *
-fetch_timestamp ()
-{
-    time_t ltime;
-    struct tm result;
-    char *stime;
-
-    stime = malloc (TIMESTAMP_MAX_LENGTH);
-    if (stime == NULL)
-        log_error_no_timestamp ("malloc failed for timestamp");
-    else
-      {
-        ltime = time(NULL);
-        localtime_r(&ltime, &result);
-        asctime_r(&result, stime);        
-      }
-    return stime;
-}
 
 #endif /* _COMMON_H_ */

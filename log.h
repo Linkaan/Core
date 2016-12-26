@@ -24,7 +24,14 @@
 #ifndef _LOG_H_
 #define _LOG_H_
 
+#include <stdio.h>
+#include <stdlib.h>
+#include <string.h>
+#include <time.h>
+
 #include "common.h"
+
+extern void log_debug (const char *, ...);
 
 /* If _DEBUG is not defined, we simply replace all _log_debug with nothing */
 #ifndef _DEBUG
@@ -46,11 +53,11 @@
           {\
             char *timestamp = fetch_timestamp ();\
             if (timestamp)\
-              {
-                fprintf (stderr, "[%s] %s: %s: %d: %s: %s\n", timestamp\
+              {\
+                fprintf (stderr, "[%s] %s: %s: %d: %s: %s\n", timestamp,\
                          __progname, __FILE__, __LINE__, msg,\
                          strerror (errno));\
-                free (timestamp);
+                free (timestamp);\
               }\
             else\
                 log_error_no_timestamp (msg);\
@@ -60,21 +67,24 @@
 #define log_error_en(en, msg)\
         do { errno = en;log_error (msg); } while(0)
 
-/* This function is prints a debug message with timestamp */
-extern inline void
-log_debug (const char *format, ...)
+/* Helper function to get current time for logging messages */
+static inline char *
+fetch_timestamp ()
 {
-	char *timestamp = fetch_timestamp ();
-    if (timestamp)
-      {
-		fprintf (stdout, "[DEBUG: %s] ", timestamp);		
-        free (timestamp);
-      }
+    time_t ltime;
+    struct tm result;
+    char *stime;
 
-    va_list args;
-	va_start (args, format);		
-    vfprintf (stdout, format, args);
-    va_end (args);
+    stime = malloc (TIMESTAMP_MAX_LENGTH);
+    if (stime == NULL)
+        log_error_no_timestamp ("malloc failed for timestamp");
+    else
+      {
+        ltime = time(NULL);
+        localtime_r(&ltime, &result);
+        asctime_r(&result, stime);        
+      }
+    return stime;
 }
 
 #endif /* _LOG_H_ */

@@ -38,6 +38,7 @@
 #include "picam_state.h"
 #include "touch.h"
 #include "common.h"
+#include "log.h"
 
 /* Read for inotify fd requires a buffer, we approximate the size */
 #define BUF_LEN (10 * (sizeof (struct inotify_event) + 32 + 1))
