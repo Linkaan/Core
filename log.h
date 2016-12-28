@@ -70,8 +70,7 @@ extern void log_debug (const char *, ...);
 /* Helper function to get current time for logging messages */
 static inline char *
 fetch_timestamp ()
-{
-    time_t ltime;
+{    
     struct tm result;
     char *stime;
 
@@ -80,9 +79,16 @@ fetch_timestamp ()
         log_error_no_timestamp ("malloc failed for timestamp");
     else
       {
+        time_t ltime;
+        char *p;
+
         ltime = time(NULL);
         localtime_r(&ltime, &result);
-        asctime_r(&result, stime);        
+        asctime_r(&result, stime);
+
+        p = strchr(stime, '\n');
+		if (p != NULL)
+			*p = '\0';
       }
     return stime;
 }
