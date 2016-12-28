@@ -51,7 +51,9 @@ on_motion_detect (void *arg)
     b = digitalRead (tdata->pir_pin) == HIGH;
     pthread_mutex_unlock (&tdata->wiring_mutex);
 
-    _log_debug ("isr %s\n", b ? "rising" : "falling");
+    _log_debug ("isr %s\n", atomic_load (&tdata->fake_isr) ? "fake" : b ?
+                                                                  "rising" :
+                                                                  "falling");
     if (b || atomic_compare_exchange_weak (&tdata->fake_isr, (_Bool[])
              { true }, false))
       {
