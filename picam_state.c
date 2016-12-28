@@ -218,33 +218,31 @@ static void
 handle_state_file (struct internal_t_data *itdata, const char *filename,
                    const char *content)
 {
-    ssize_t s;
-
-    if (strcmp (filename, "record") == 0 && content != NULL)
-      {
-        if (strcmp (content, "false") == 0)
-          {
-            if (atomic_compare_exchange_weak (itdata->is_recording, (_Bool[])
-                { true }, false))
-              {
-                s = clock_gettime (CLOCK_REALTIME, &itdata->end);
-                double elapsed = (itdata->end.tv_sec - itdata->start.tv_sec) *
-                                  1E9 + itdata->end.tv_nsec -
-                                  itdata->start.tv_nsec;
-                _log_debug ("recorded video of length %lf seconds\n",
-                            elapsed / 1E9);               
-              }
-          }
-        else if (strcmp (content, "true") == 0)
-          {
-            _log_debug ("started recording (is recording = %s)\n",
-                        atomic_load (itdata->is_recording) ? "true" :
-                                                             "false");
-            s = clock_gettime (CLOCK_REALTIME, &itdata->start);
-          }
-        else
-            _log_debug ("record state changed to %s\n", content);
-      }
+  if (strcmp (filename, "record") == 0 && content != NULL)
+    {
+      if (strcmp (content, "false") == 0)
+        {
+          if (atomic_compare_exchange_weak (itdata->is_recording, (_Bool[])
+              { true }, false))
+            {
+              clock_gettime (CLOCK_REALTIME, &itdata->end);
+              double elapsed = (itdata->end.tv_sec - itdata->start.tv_sec) *
+                                1E9 + itdata->end.tv_nsec -
+                                itdata->start.tv_nsec;
+              _log_debug ("recorded video of length %lf seconds\n",
+                          elapsed / 1E9);               
+            }
+        }
+      else if (strcmp (content, "true") == 0)
+        {
+          _log_debug ("started recording (is recording = %s)\n",
+                      atomic_load (itdata->is_recording) ? "true" :
+                                                           "false");
+          clock_gettime (CLOCK_REALTIME, &itdata->start);
+        }
+      else
+          _log_debug ("record state changed to %s\n", content);
+    }
 }
 
 /* Helper function to create picam hooks on record event */
