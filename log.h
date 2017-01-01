@@ -82,11 +82,11 @@ fetch_timestamp ()
         time_t ltime;
         char *p;
 
-        ltime = time(NULL);
-        localtime_r(&ltime, &result);
-        asctime_r(&result, stime);
+        ltime = time (NULL);
+        localtime_r (&ltime, &result);
+        asctime_r (&result, stime);
 
-        p = strchr(stime, '\n');
+        p = strchr (stime, '\n');
 		if (p != NULL)
 			*p = '\0';
       }
