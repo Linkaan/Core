@@ -14,14 +14,20 @@
 
 #include "log.h"
 
+/* These values should be initalized from a config file */
+#define PORT 1337
+
 static void
-fg_read_cb (struct bufferevent *bev, void *ctx)
+fg_read_cb (struct bufferevent *bev, void *arg)
 {
-	/* TODO: Handle event */
+	struct evbuffer *input;
+
+	input = bufferevent_get_input(bev);
+	/* TODO: Deserialize event, handle event and write back if necessary */
 }
 
 static void
-fg_event_cb (struct bufferevent *bev, short events, void *ctx)
+fg_event_cb (struct bufferevent *bev, short events, void *arg)
 {
 	if (events & BEV_EVENT_ERROR)
 		log_error ("error in bufferevent");
@@ -31,7 +37,7 @@ fg_event_cb (struct bufferevent *bev, short events, void *ctx)
 
 static void
 accept_conn_cb (struct evconnlistener *listener, evutil_socket_t fd,
-	struct sockaddr *address, int socklen, void *ctx)
+	struct sockaddr *address, int socklen, void *arg)
 {
 	struct event_base *base;
 	struct bufferevent *bev;
@@ -43,7 +49,7 @@ accept_conn_cb (struct evconnlistener *listener, evutil_socket_t fd,
 }
 
 static void
-accept_error_cb (struct evconnlistener *listener, void *ctx)
+accept_error_cb (struct evconnlistener *listener, void *arg)
 {
 	int err;
 	struct event_base *base;
@@ -55,12 +61,66 @@ accept_error_cb (struct evconnlistener *listener, void *ctx)
 	event_base_loopexit (base, NULL);
 }
 
-struct fg_events_data *
-fg_events_init (void (*callback)(char *))
+static void *
+events_thread_start (void *param)
+{
+	struct fg_events_data *itdata;
+	struct evconnlistener *listener;
+	struct sockaddr_in sin;
+
+	itdata = (struct fg_events_data *) param;
+	itdata->base = event_base_new ();
+	if (itdata->base == NULL)
+	  {
+	  	fprintf (stderr, "Could not create even base\n");
+	  	return NULL;
+	  }
+
+	/* TODO: also listen on UNIX socket */
+	memset (&sin, 0, sizeof (sin));
+	sin.sin_family = AF_INET;
+	sin.sin_addr.s_addr = INADDR_ANY;
+	sin.sin_port = htons (PORT);
+
+	listener = evconnlistener_new_bind (base, &accept_conn_cb, NULL,
+										LEV_OPT_CLOSE_ON_FREE |
+										LEV_OPT_REUSABLE, -1,
+										(struct sockaddr *) &sin,
+										sizeof (sin));
+	if (listener == NULL)
+	  {
+	  	log_error ("Could not create INET listener");
+	  	return NULL;
+	  }
+	evconnlistener_set_error_cb (listener, &accept_error_cb);
+
+	event_base_dispatch (itdata->base);
+
+	return NULL;
+}
+
+int
+fg_events_init (struct thread_data *tdata, fg_event_cb cb)
 {
 	ssize_t s;
-	struct sockaddr_in sin;
-	struct fg_events_data itdata;
 
-	memset (&itdata, 0, sizeof (itdata));
+	memset (&tdata->etdata, 0, sizeof (tdata->etdata));
+	tdata->etdata->cb = cb;
+
+	s = pthread_create (&tdata->events_t, &tdata->attr, &events_thread_start,
+                        &tdata->etdata);
+    if (s != 0) {
+        log_error_en (s, "error creating events thread");
+        return 1;
+    }
+    tdata->etdata->events_t = &tdata->events_t;
+
+    return 0;
+}
+
+void
+fg_events_shutdown (struct *fg_events_data itdata)
+{
+	event_base_loopexit (itdata->base);
+	pthread_join (*itdata->events_t);
 }

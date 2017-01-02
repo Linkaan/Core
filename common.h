@@ -53,17 +53,19 @@ extern const char *__progname;
 
 /* Common data structure used by threads */
 struct thread_data {
-    int             pir_pin;    
-    int             timerfd;
-    int             timerpipe[2];
-    int             record_eventfd;
-    atomic_bool     fake_isr;
-    atomic_bool     is_recording;
-    pthread_t       timer_t;
-    pthread_t       picam_t;
-    pthread_attr_t  attr;
-    pthread_mutex_t record_mutex;
-    pthread_mutex_t wiring_mutex;
+    int                   pir_pin;    
+    int                   timerfd;
+    int                   timerpipe[2];
+    int                   record_eventfd;
+    atomic_bool           fake_isr;
+    atomic_bool           is_recording;
+    pthread_t             timer_t;
+    pthread_t             picam_t;
+    pthread_t             events_t;
+    pthread_attr_t        attr;
+    pthread_mutex_t       record_mutex;
+    pthread_mutex_t       wiring_mutex;
+    struct fg_events_data edata;
 };
 
 #endif /* _COMMON_H_ */

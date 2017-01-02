@@ -65,7 +65,7 @@ static sem_t keep_going;
 static volatile int raise_fake_isr = 0;
 
 /* Signal handler for SIGTSTP, SIGINT, SIGHUP and SIGTERM */
-void
+static void
 handle_sig (int signum)
 {
     struct sigaction new_action;
@@ -82,7 +82,7 @@ handle_sig (int signum)
 }
 
 /* Setup termination signals to exit gracefully */
-void
+static void
 handle_signals ()
 {
     struct sigaction new_action, old_action;
@@ -381,8 +381,8 @@ main (void)
     return 0;
 }
 
-static
-void do_cleanup (struct thread_data *tdata)
+static void
+do_cleanup (struct thread_data *tdata)
 {
 
 }

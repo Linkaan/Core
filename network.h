@@ -24,13 +24,18 @@
 #ifndef _NETWORK_H_
 #define _NETWORK_H_
 
-struct fg_events_data {
+#include <stdint.h>
+
+typedef void (*fg_event_cb)(int32_t, int32_t *);
+
+struct fg_events_data {	
 	struct event_base *base;
-    pthread_t          base_t;
+    pthread_t         *events_t;
+    void 			  fg_event_cb cb;
 };
 
 /* Initialize libevent and add asynchronous event listener, register cb */
-extern struct fg_events_data *fg_events_init (void (*)(char *));
+extern int fg_events_init (fg_event_cb);
 
 /* Tear down event loop and cleanup */
 extern void fg_events_shutdown (struct *fg_events_data);
