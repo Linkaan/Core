@@ -1,3 +1,26 @@
+/*
+ *  network.c
+ *    Handles events over TCP using libevent2 and fagelmatare-serializer
+ *****************************************************************************
+ *  This file is part of Fågelmataren, an embedded project created to learn
+ *  Linux and C. See <https://github.com/Linkaan/Fagelmatare>
+ *  Copyright (C) 2015-2017 Linus Styrén
+ *
+ *  Fågelmataren is free software; you can redistribute it and/or modify
+ *  it under the terms of the GNU General Public License as published by
+ *  the Free Software Foundation; either version 3 of the Licence, or
+ *  (at your option) any later version.
+ *
+ *  Fågelmataren is distributed in the hope that it will be useful,
+ *  but WITHOUT ANY WARRANTY; without even the implied warranty of
+ *  MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
+ *  GNU General Public Licence for more details.
+ *
+ *  You should have received a copy of the GNU General Public Licence
+ *  along with Fågelmataren.  If not, see <http://www.gnu.org/licenses/>.
+ *****************************************************************************
+ */
+
 #include <netinet/in.h>
 #include <arpa/inet.h>
 #include <string.h>
@@ -12,6 +35,7 @@
 #include <event2/bufferevent.h>
 #include <event2/buffer.h>
 
+#include "network.h"
 #include "log.h"
 
 /* These values should be initalized from a config file */
@@ -20,8 +44,10 @@
 static void
 fg_read_cb (struct bufferevent *bev, void *arg)
 {
+	struct fg_events_data *itdata;
 	struct evbuffer *input;
 
+	itdata = (struct fg_events_data *) param;
 	input = bufferevent_get_input(bev);
 	/* TODO: Deserialize event, handle event and write back if necessary */
 }
@@ -44,7 +70,7 @@ accept_conn_cb (struct evconnlistener *listener, evutil_socket_t fd,
 
 	base = evconnlistener_get_base (listener);
 	bev = bufferevent_socket_new (base, fd, BEV_OPT_CLOSE_ON_FREE);
-	bufferevent_setcb (bev, echo_read_cb, NULL, echo_event_cb, NULL);	
+	bufferevent_setcb (bev, echo_read_cb, NULL, echo_event_cb, arg);	
 	bufferevent_enable (bev, EV_READ | EV_WRITE);
 }
 
@@ -82,7 +108,7 @@ events_thread_start (void *param)
 	sin.sin_addr.s_addr = INADDR_ANY;
 	sin.sin_port = htons (PORT);
 
-	listener = evconnlistener_new_bind (base, &accept_conn_cb, NULL,
+	listener = evconnlistener_new_bind (base, &accept_conn_cb, param,
 										LEV_OPT_CLOSE_ON_FREE |
 										LEV_OPT_REUSABLE, -1,
 										(struct sockaddr *) &sin,
