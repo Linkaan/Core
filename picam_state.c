@@ -115,6 +115,7 @@ thread_picam_start (void *arg)
         /* Passing -1 to poll as third argument means to block (INFTIM) */
         s = poll (itdata.poll_fds, 3, -1);
 
+        _log_debug ("picam_state.c: poll returned %d\n", s);
         if (s < 0)
             log_error ("poll failed");
         else if (s > 0)
@@ -123,12 +124,12 @@ thread_picam_start (void *arg)
               {
                 break;
               }
-            else if (itdata.poll_fds[0].revents & events)
+            else
               {
-                handle_state_file_created (&itdata);                
-              }
-            else /* tdata->timerpipe[0] or tdata->record_eventfd */
-              {
+                if (itdata.poll_fds[0].revents & events)
+                  {
+                    handle_state_file_created (&itdata);                
+                  }
                 if (itdata.poll_fds[2].revents & events)
                   {
                     pthread_mutex_lock (&tdata->record_mutex);

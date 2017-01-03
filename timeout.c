@@ -81,6 +81,7 @@ thread_timeout_start (void *arg)
         /* Passing -1 to poll as third argument means to block (INFTIM) */
         s = poll (itdata.poll_fds, 2, -1);
 
+        _log_debug ("timeout.c: poll returned %d\n", s);
         if (s < 0)
             log_error("poll failed");
         else if (s > 0)
@@ -114,12 +115,9 @@ thread_timeout_start (void *arg)
                 break;
               }
 
-            if (itdata.poll_fds[0].revents & events)
-              {
-                s = read (itdata.poll_fds[0].fd, &u, sizeof (uint64_t));
-                if (s < 0)
-                    log_error ("read failed");
-              }            
+            s = read (itdata.poll_fds[0].fd, &u, sizeof (uint64_t));
+            if (s < 0)
+                log_error ("read failed");
           }
       }
 
