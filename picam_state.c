@@ -115,7 +115,6 @@ thread_picam_start (void *arg)
         /* Passing -1 to poll as third argument means to block (INFTIM) */
         s = poll (itdata.poll_fds, 3, -1);
 
-        _log_debug ("picam_state.c: poll returned %d\n", s);
         if (s < 0)
             log_error ("poll failed");
         else if (s > 0)

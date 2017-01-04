@@ -47,7 +47,7 @@ fg_read_cb (struct bufferevent *bev, void *arg)
 	struct fg_events_data *itdata;
 	struct evbuffer *input;
 
-	itdata = (struct fg_events_data *) param;
+	itdata = (struct fg_events_data *) arg;
 	input = bufferevent_get_input(bev);
 	/* TODO: Deserialize event, handle event and write back if necessary */
 }

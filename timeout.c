@@ -79,9 +79,10 @@ thread_timeout_start (void *arg)
     while (1)
       {
         /* Passing -1 to poll as third argument means to block (INFTIM) */
+        _log_debug ("timeout.c: poll call blocking, waiting for fd %d\n", itdata.poll_fds[0].fd);
         s = poll (itdata.poll_fds, 2, -1);
 
-        _log_debug ("timeout.c: poll returned %d\n", s);
+        _log_debug ("timeout.c: poll returned %d on fd %d\n", s, itdata.poll_fds[0].fd);
         if (s < 0)
             log_error("poll failed");
         else if (s > 0)
