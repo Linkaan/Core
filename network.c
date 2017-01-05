@@ -44,11 +44,39 @@
 static void
 fg_read_cb (struct bufferevent *bev, void *arg)
 {
+	size_t len;
+  	unsigned char *buffer, *ptr;
 	struct fg_events_data *itdata;
 	struct evbuffer *input;
 
 	itdata = (struct fg_events_data *) arg;
 	input = bufferevent_get_input(bev);
+
+  	len = evbuffer_get_length (input);
+  	buffer = malloc (len);
+  	if (!buffer) {
+  		log_error_en ("malloc failed");
+  		return;
+  	}
+  	evbuffer_copyout (input, data, len);
+
+  	while (ptr - buffer < len) {
+  		struct fgevent fgev;
+
+  		ptr = deserialize_fgevent (ptr, &fgev);
+
+  		/* Check if event was successfully parsed, if not we must increment
+  		   ptr by payload length to prevent any events next to be incorrectly
+  		   parsed */
+  		if (fgev.length > 0 && !fgev.payload)
+  		  {
+  		  	log_error_en ("failed to allocate memory for event");
+  		  	ptr += fgev.length;
+  		  }
+  		ítdata->cb (fgev.length, fgev.payload);
+  	}
+
+  	free (buffer);
 	/* TODO: Deserialize event, handle event and write back if necessary */
 }
 
@@ -98,7 +126,7 @@ events_thread_start (void *param)
 	itdata->base = event_base_new ();
 	if (itdata->base == NULL)
 	  {
-	  	fprintf (stderr, "Could not create even base\n");
+	  	fprintf (stderr, "Could not create event base\n");
 	  	return NULL;
 	  }
 

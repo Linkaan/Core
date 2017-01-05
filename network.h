@@ -31,7 +31,7 @@ typedef void (*fg_event_cb)(int32_t, int32_t *);
 struct fg_events_data {	
 	struct event_base *base;
     pthread_t         *events_t;
-    void 			  fg_event_cb cb;
+    fg_event_cb 	  cb;
 };
 
 /* Initialize libevent and add asynchronous event listener, register cb */
