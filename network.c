@@ -1,6 +1,6 @@
 /*
  *  network.c
- *    Handles events over TCP using libevent2 and fagelmatare-serializer
+ *    Implemenents callback function to handle events using fgevents library
  *****************************************************************************
  *  This file is part of Fågelmataren, an embedded project created to learn
  *  Linux and C. See <https://github.com/Linkaan/Fagelmatare>
@@ -21,160 +21,36 @@
  *****************************************************************************
  */
 
-#include <netinet/in.h>
-#include <arpa/inet.h>
-#include <string.h>
-#include <stdlib.h>
-#include <unistd.h>
 #include <stdint.h>
-#include <stdio.h>
-#include <fcntl.h>
-#include <errno.h>
 
-#include <event2/listener.h>
-#include <event2/bufferevent.h>
-#include <event2/buffer.h>
-
-#include "network.h"
+#include "common.h"
 #include "log.h"
 
-/* These values should be initalized from a config file */
-#define PORT 1337
-
-static void
-fg_read_cb (struct bufferevent *bev, void *arg)
-{
-	size_t len;
-  	unsigned char *buffer, *ptr;
-	struct fg_events_data *itdata;
-	struct evbuffer *input;
-
-	itdata = (struct fg_events_data *) arg;
-	input = bufferevent_get_input(bev);
-
-  	len = evbuffer_get_length (input);
-  	buffer = malloc (len);
-  	if (!buffer) {
-  		log_error_en ("malloc failed");
-  		return;
-  	}
-  	evbuffer_copyout (input, data, len);
-
-  	while (ptr - buffer < len) {
-  		struct fgevent fgev;
-
-  		ptr = deserialize_fgevent (ptr, &fgev);
-
-  		/* Check if event was successfully parsed, if not we must increment
-  		   ptr by payload length to prevent any events next to be incorrectly
-  		   parsed */
-  		if (fgev.length > 0 && !fgev.payload)
-  		  {
-  		  	log_error_en ("failed to allocate memory for event");
-  		  	ptr += fgev.length;
-  		  }
-  		ítdata->cb (fgev.length, fgev.payload);
-  	}
-
-  	free (buffer);
-	/* TODO: Deserialize event, handle event and write back if necessary */
-}
-
-static void
-fg_event_cb (struct bufferevent *bev, short events, void *arg)
-{
-	if (events & BEV_EVENT_ERROR)
-		log_error ("error in bufferevent");
-	if (events & (BEV_EVENT_EOF | BEV_EVENT_ERROR))
-		bufferevent_free (bev);
-}
-
-static void
-accept_conn_cb (struct evconnlistener *listener, evutil_socket_t fd,
-	struct sockaddr *address, int socklen, void *arg)
-{
-	struct event_base *base;
-	struct bufferevent *bev;
-
-	base = evconnlistener_get_base (listener);
-	bev = bufferevent_socket_new (base, fd, BEV_OPT_CLOSE_ON_FREE);
-	bufferevent_setcb (bev, echo_read_cb, NULL, echo_event_cb, arg);	
-	bufferevent_enable (bev, EV_READ | EV_WRITE);
-}
-
-static void
-accept_error_cb (struct evconnlistener *listener, void *arg)
-{
-	int err;
-	struct event_base *base;
-
-	base = evconnlistener_get_base (listener);
-	err = EVUTIL_SOCKET_ERROR ();
-	fprintf (stderr, "Error when listening on events (%d): %s\n", err,
-		evutil_socket_error_to_string (err));
-	event_base_loopexit (base, NULL);
-}
-
-static void *
-events_thread_start (void *param)
-{
-	struct fg_events_data *itdata;
-	struct evconnlistener *listener;
-	struct sockaddr_in sin;
-
-	itdata = (struct fg_events_data *) param;
-	itdata->base = event_base_new ();
-	if (itdata->base == NULL)
-	  {
-	  	fprintf (stderr, "Could not create event base\n");
-	  	return NULL;
-	  }
-
-	/* TODO: also listen on UNIX socket */
-	memset (&sin, 0, sizeof (sin));
-	sin.sin_family = AF_INET;
-	sin.sin_addr.s_addr = INADDR_ANY;
-	sin.sin_port = htons (PORT);
-
-	listener = evconnlistener_new_bind (base, &accept_conn_cb, param,
-										LEV_OPT_CLOSE_ON_FREE |
-										LEV_OPT_REUSABLE, -1,
-										(struct sockaddr *) &sin,
-										sizeof (sin));
-	if (listener == NULL)
-	  {
-	  	log_error ("Could not create INET listener");
-	  	return NULL;
-	  }
-	evconnlistener_set_error_cb (listener, &accept_error_cb);
-
-	event_base_dispatch (itdata->base);
-
-	return NULL;
-}
-
+/* Returns 1 on should writeback; 0 if not*/
 int
-fg_events_init (struct thread_data *tdata, fg_event_cb cb)
+fg_handle_event (void *arg, struct fgevent *fgev, struct fgevent *ansev)
 {
-	ssize_t s;
+	int i;
+	struct thread_data *tdata = arg;
 
-	memset (&tdata->etdata, 0, sizeof (tdata->etdata));
-	tdata->etdata->cb = cb;
+	/* Handle error in fgevent */
+	if (fgev == NULL)
+	  {
+	  	log_error ("%s\n", tdata->etdata.error);
+	  	return 0;
+	  }
 
-	s = pthread_create (&tdata->events_t, &tdata->attr, &events_thread_start,
-                        &tdata->etdata);
-    if (s != 0) {
-        log_error_en (s, "error creating events thread");
-        return 1;
-    }
-    tdata->etdata->events_t = &tdata->events_t;
+	_log_debug ("eventid: %d\n", fgev->id);
+	for (i = 0; i < fgev->length; i++)
+	  {
+	  	_log_debug ("%d\n", fgev->payload[i]);
+	  }
 
-    return 0;
-}
+	if (!ansev->writeback)
+		return 0;
 
-void
-fg_events_shutdown (struct *fg_events_data itdata)
-{
-	event_base_loopexit (itdata->base);
-	pthread_join (*itdata->events_t);
+	ansev->id = 5;
+	ansev->writeback = 0;
+	ansev->length = 0;
+	return 1;
 }

@@ -43,6 +43,7 @@
 #include "picam_state.h"
 #include "motion.h"
 #include "timeout.h"
+#include "network.h"
 #include "common.h"
 #include "log.h"
 
@@ -306,6 +307,15 @@ main (void)
         return 1;
       }
 
+    s = fg_events_server_init (&tdata.etdata, &fg_handle_event, PORT,
+                               UNIX_SOCKET_PATH);
+    if (s != 0)
+      {
+        log_error ("error initializing fgevents");
+        do_cleanup (&tdata);
+        return 1;
+      }
+
     while (1)
       {
         sem_wait (&keep_going);
@@ -353,6 +363,8 @@ main (void)
         join_or_cancel_thread (tdata.timer_t, &ts);
         join_or_cancel_thread (tdata.picam_t, &ts);
       }
+
+    fg_events_server_shutdown (&tdata.etdata);
 
     s = pthread_mutex_destroy (&tdata.record_mutex);
     if (s != 0)

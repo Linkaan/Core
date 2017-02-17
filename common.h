@@ -1,5 +1,5 @@
 /*
- *  timeout.h
+ *  common.h
  *    Common macros and defs used in multiple source files
  *****************************************************************************
  *  This file is part of Fågelmataren, an embedded project created to learn
@@ -45,7 +45,8 @@
 #define PICAM_STATE_DIR "/mnt/mmcblk0p2/picam/state"
 #define PICAM_STOP_HOOK "/mnt/mmcblk0p2/picam/hooks/stop_record"
 #define PICAM_START_HOOK "/mnt/mmcblk0p2/picam/hooks/start_record"
-
+#define UNIX_SOCKET_PATH "/tmp/fg.socket"
+#define PORT 1337
 
 /* String containing name the program is called with.
    To be initialized by main(). */
@@ -56,7 +57,7 @@ struct thread_data {
     int                   pir_pin;    
     int                   timerfd;
     int                   timerpipe[2];
-    int                   record_eventfd;
+    int                   record_eventfd;    
     atomic_bool           fake_isr;
     atomic_bool           is_recording;
     pthread_t             timer_t;
@@ -65,6 +66,7 @@ struct thread_data {
     pthread_attr_t        attr;
     pthread_mutex_t       record_mutex;
     pthread_mutex_t       wiring_mutex;
+    struct fg_events_data etdata;
 };
 
 #endif /* _COMMON_H_ */

@@ -26,18 +26,9 @@
 
 #include <stdint.h>
 
-typedef void (*fg_event_cb)(int32_t, int32_t *);
+#include <serializer.h>
 
-struct fg_events_data {	
-	struct event_base *base;
-    pthread_t         *events_t;
-    fg_event_cb 	  cb;
-};
-
-/* Initialize libevent and add asynchronous event listener, register cb */
-extern int fg_events_init (fg_event_cb);
-
-/* Tear down event loop and cleanup */
-extern void fg_events_shutdown (struct *fg_events_data);
+/* Implements fg_handle_event_cb from fgevents */
+extern int fg_handle_event (void *, struct fgevent *, struct fgevent *);
 
 #endif /* _NETWORK_H_ */

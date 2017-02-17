@@ -87,8 +87,8 @@ fetch_timestamp ()
         asctime_r (&result, stime);
 
         p = strchr (stime, '\n');
-		if (p != NULL)
-			*p = '\0';
+		    if (p != NULL)
+			      *p = '\0';
       }
     return stime;
 }
