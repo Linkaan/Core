@@ -48,6 +48,7 @@
 #include <sys/stat.h>
 #include <sys/ioctl.h>
 
+#include "touch.h"
 #include "common.h"
 #include "log.h"
 

@@ -32,6 +32,7 @@
 
 #include <wiringPi/wiringPi.h>
 
+#include "motion.h"
 #include "common.h"
 #include "log.h"
 

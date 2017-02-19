@@ -23,6 +23,7 @@
 
 #include <stdint.h>
 
+#include "network.h"
 #include "common.h"
 #include "log.h"
 
@@ -36,7 +37,7 @@ fg_handle_event (void *arg, struct fgevent *fgev, struct fgevent *ansev)
 	/* Handle error in fgevent */
 	if (fgev == NULL)
 	  {
-	  	log_error ("%s\n", tdata->etdata.error);
+	  	log_error_en (tdata->etdata.save_errno, tdata->etdata.error);
 	  	return 0;
 	  }
 

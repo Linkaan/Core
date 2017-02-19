@@ -24,9 +24,10 @@
 INCLUDE ?= -I.
 LINKS ?= -L.
 CFLAGS := $(INCLUDE) -std=gnu11 -g -Wall -Wextra -D _GNU_SOURCE
-LDFLAGS := $(LINKS) -lwiringPi -lpthread
-SOURCES := log.c core.c motion.c picam_state.c timeout.c touch.c
-HEADERS := log.h common.h motion.h picam_state.h tiemout.h touch.h
+LDFLAGS := $(LINKS) -lwiringPi -lpthread -lfg-events -lfg-serializer -levent\
+-levent_pthreads
+SOURCES := log.c core.c motion.c picam_state.c timeout.c touch.c network.c
+HEADERS := log.h common.h motion.h picam_state.h tiemout.h touch.h network.h
 OBJECTS=$(SOURCES:.c=.o)
 EXECUTABLE := fagelmatare-core
 
