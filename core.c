@@ -307,7 +307,7 @@ main (void)
         return 1;
       }
 
-    s = fg_events_server_init (&tdata.etdata, &fg_handle_event, PORT,
+    s = fg_events_server_init (&tdata.etdata, &fg_handle_event, &tdata, PORT,
                                UNIX_SOCKET_PATH);
     if (s != 0)
       {
