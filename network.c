@@ -47,7 +47,7 @@ fg_handle_event (void *arg, struct fgevent *fgev, struct fgevent *ansev)
 	  	_log_debug ("%d\n", fgev->payload[i]);
 	  }
 
-	if (!ansev->writeback)
+	if (!fgev->writeback)
 		return 0;
 
 	ansev->id = 5;
