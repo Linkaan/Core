@@ -308,7 +308,7 @@ main (void)
       }
 
     s = fg_events_server_init (&tdata.etdata, &fg_handle_event, &tdata, PORT,
-                               UNIX_SOCKET_PATH);
+                               UNIX_SOCKET_PATH, FG_MASTER);
     if (s != 0)
       {
         log_error ("error initializing fgevents");
