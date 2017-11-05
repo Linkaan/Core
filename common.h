@@ -54,12 +54,20 @@
    To be initialized by main(). */
 extern const char *__progname;
 
+struct SensorData {
+    float intemp;
+    float outtemp;
+    float cputemp;
+    float pressure;
+    float humidity;
+};
+
 /* Common data structure used by threads */
 struct thread_data {
     int                   pir_pin;    
     int                   timerfd;
     int                   timerpipe[2];
-    int                   record_eventfd;    
+    int                   record_eventfd;
     atomic_bool           fake_isr;
     atomic_bool           is_recording;
     pthread_t             timer_t;
@@ -68,7 +76,9 @@ struct thread_data {
     pthread_attr_t        attr;
     pthread_mutex_t       record_mutex;
     pthread_mutex_t       wiring_mutex;
+    pthread_mutex_t       sensor_mutex;
     struct fg_events_data etdata;
+    struct SensorData     sensor_data;
 };
 
 #endif /* _COMMON_H_ */

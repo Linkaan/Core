@@ -46,6 +46,7 @@
 #include "network.h"
 #include "common.h"
 #include "log.h"
+#include "core.h"
 
 /* The PIR sensor is wired to the physical pin 31 (wiringPi pin 21) */
 #define PIR_PIN 21
@@ -134,6 +135,14 @@ setup_thread_attr (struct thread_data *tdata)
 {
     ssize_t s;
 
+    s = pthread_mutex_init (&tdata->sensor_mutex, NULL);
+    if (s != 0)
+      {
+        log_error_en (s, "error in pthread_mutex_init");
+        do_cleanup (tdata);
+        return s;   
+      }
+
     s = pthread_mutex_init (&tdata->record_mutex, NULL);
     if (s != 0)
       {
@@ -179,7 +188,7 @@ create_timer_thread (struct thread_data *tdata)
     struct sched_param param;
     ssize_t s;
 
-    tdata->is_recording = ATOMIC_VAR_INIT(false);
+    tdata->is_recording = ATOMIC_VAR_INIT (false);
     s = pthread_create (&tdata->timer_t, &tdata->attr, &thread_timeout_start,
                         tdata);
     if (s != 0)
@@ -366,6 +375,10 @@ main (void)
 
     fg_events_server_shutdown (&tdata.etdata);
 
+    s = pthread_mutex_destroy (&tdata.sensor_mutex);
+    if (s != 0)
+        log_error_en (s, "error in pthread_mutex_destroy");
+
     s = pthread_mutex_destroy (&tdata.record_mutex);
     if (s != 0)
         log_error_en (s, "error in pthread_mutex_destroy");
@@ -397,4 +410,37 @@ static void
 do_cleanup (struct thread_data *tdata)
 {
 
+}
+
+void
+read_cpu_temp (struct thread_data *tdata)
+{
+  int cpu_temp, fd, rc;
+  char buf[8];
+
+  fd = open ("/sys/class/thermal/thermal_zone0/temp", O_RDONLY);
+  if(fd >= 0)
+    {
+      if((rc = read(fd, buf, sizeof(buf))) > 0)
+        {
+          char *end;
+
+          strtok (buf, " \n");
+          cpu_temp = (int) strtol (buf, &end, 10);
+          if (!(*end || errno == ERANGE))
+            {
+              cpu_temp = (cpu_temp + 50) / 100;
+              tdata->sensor_data.cputemp = cpu_temp;
+            }
+        }
+      else if(rc < 0)
+        {
+          log_error ("error in read");
+        }
+      close (fd);
+    }
+  else
+    {
+      log_error ("error in open");
+    }
 }
