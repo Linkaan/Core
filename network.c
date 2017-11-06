@@ -62,7 +62,7 @@ handle_sensor_event (struct thread_data *tdata, struct fgevent *fgev,
           {
             tdata->sensor_data.pressure = fgev->payload[5];
             ansev->payload[4] = PRESSURE;
-            ansev->payload[5] = fgev->payload[7];
+            ansev->payload[5] = fgev->payload[5];
           }
         if (fgev->payload[6] == HUMIDITY)
           {
